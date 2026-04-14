@@ -278,12 +278,12 @@ show_price_axis    = input.bool(true,  "Price Axis Labels",          group=GRP_V
 show_labels        = input.string("Level", "Labels",                  group=GRP_VIS,
      options=["Level", "Price", "Level & Price", "Off"],
      tooltip="What to show in level labels.\n\nLevel: name only (e.g. 'Call Wall 1').\nPrice: price only (e.g. '5800').\nLevel & Price: both (e.g. 'Call Wall 1 (5800)').\nOff: hide all labels.")
-in_basis_shift_mode = input.string("Auto", "Apply Basis Shift", options=["Auto", "On", "Off"], group=GRP_VIS,
-     tooltip="When Auto, the indicator will dynamically calculate the shift for ES/MES (using SPX) and NQ/MNQ (using NDX). If unavailable, it falls back to the pasted Basis Shift for futures charts. Select 'On' to always use the pasted shift, or 'Off' to plot raw levels.")
+in_basis_shift_mode = input.string("Prior Bar", "Apply Basis Shift", options=["Prior Bar", "Session Open", "Off"], group=GRP_VIS,
+     tooltip="When Prior Bar, the indicator will dynamically calculate the real-time exact shift using the prior close for ES/MES and NQ/MNQ. When Session Open, it strictly uses the 'Basis Shift' from your pasted payload (representing the snapshot start-of-session basis). Select 'Off' to plot raw levels.")
 apply_basis_shift = switch in_basis_shift_mode
-    "On"  => true
-    "Off" => false
-    => syminfo.type == "futures"
+    "Session Open" => true
+    "Prior Bar"     => syminfo.type == "futures"
+    => false
 show_regime_bg     = input.bool(false, "Regime Background Tint",     group=GRP_VIS,
      tooltip="Tints the chart teal when price is above the gamma flip (mean-reverting regime) and magenta when below (amplifying). Off by default to keep the chart clean; enable for a session-wide visual filter.")
 show_hud           = input.bool(true,  "HUD Dashboard",              group=GRP_VIS,
@@ -654,7 +654,7 @@ if barstate.isfirst
     _rc_bs  := pnum(resolve_value(_rc_u, _rc_d, "Basis Shift"))
 
 _rc_sh = 0.0
-if in_basis_shift_mode == "Auto"
+if in_basis_shift_mode == "Prior Bar"
     if not na(_dynamic_basis)
         _rc_sh := _dynamic_basis
     else if apply_basis_shift and not na(_rc_bs)
@@ -937,7 +937,7 @@ if barstate.islast
     raw_shift   = pnum(in_basis_shift)
     
     basis_shift = 0.0
-    if in_basis_shift_mode == "Auto"
+    if in_basis_shift_mode == "Prior Bar"
         if not na(_dynamic_basis)
             basis_shift := _dynamic_basis
         else if apply_basis_shift and not na(raw_shift)
