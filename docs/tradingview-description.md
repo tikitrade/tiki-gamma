@@ -48,7 +48,7 @@ This indicator draws those levels. It does not repaint. It is not a lagging sign
 [*][b]Proximity Highlighting[/b] — Zone opacity increases when price enters a level. The active level always stands out.
 [*][b]Max Pain Expansion[/b] — The max pain zone grows as charm effects strengthen into the close, reflecting real-time gravitational pull.
 [*][b]Price Axis Tags[/b] — Every level is tagged on the price axis for quick reference without chart clutter.
-[*][b]Futures Basis Shift[/b] — SPX/NDX levels mapped accurately onto ES/NQ charts. Applied automatically from the pasted data.
+[*][b]Futures Basis Shift[/b] — SPX/NDX levels mapped accurately onto ES/NQ charts. When in Auto mode, the indicator dynamically calculates the exact, real-time basis offset using prior close data to ensure perfect, stable alignment. If the ticker is unmapped, it automatically falls back to your initially pasted Basis Shift.
 [/list]
 
 [b]Settings & Configuration[/b]

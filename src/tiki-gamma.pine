@@ -279,7 +279,7 @@ show_labels        = input.string("Level", "Labels",                  group=GRP_
      options=["Level", "Price", "Level & Price", "Off"],
      tooltip="What to show in level labels.\n\nLevel: name only (e.g. 'Call Wall 1').\nPrice: price only (e.g. '5800').\nLevel & Price: both (e.g. 'Call Wall 1 (5800)').\nOff: hide all labels.")
 in_basis_shift_mode = input.string("Auto", "Apply Basis Shift", options=["Auto", "On", "Off"], group=GRP_VIS,
-     tooltip="When Auto, the Basis Shift from the pasted data is automatically applied to futures charts, mapping spot levels to the futures price. It is ignored for indices like SPX. Select 'On' to always apply it, or 'Off' to plot raw levels.")
+     tooltip="When Auto, the indicator will dynamically calculate the shift for ES/MES (using SPX) and NQ/MNQ (using NDX). If unavailable, it falls back to the pasted Basis Shift for futures charts. Select 'On' to always use the pasted shift, or 'Off' to plot raw levels.")
 apply_basis_shift = switch in_basis_shift_mode
     "On"  => true
     "Off" => false
@@ -618,22 +618,51 @@ parse_underlying(s) =>
 
 
 // ════════════════════════════════════════════════════════════════════
+// DYNAMIC AUTO BASIS
+// Evaluated globally to provide dynamic basis shift for ES/NQ.
+// ════════════════════════════════════════════════════════════════════
+
+_spx_close = request.security("SP:SPX", timeframe.period, close[1])
+_ndx_close = request.security("NASDAQ:NDX", timeframe.period, close[1])
+
+_is_es = syminfo.root == "ES" or syminfo.root == "MES"
+_is_nq = syminfo.root == "NQ" or syminfo.root == "MNQ"
+
+_dynamic_basis = float(na)
+if _is_es and not na(_spx_close)
+    _dynamic_basis := close[1] - _spx_close
+else if _is_nq and not na(_ndx_close)
+    _dynamic_basis := close[1] - _ndx_close
+
+
+// ════════════════════════════════════════════════════════════════════
 // REGIME LEVEL CACHE
 // Parsed once on the first bar so the per-bar bgcolor can use it
 // without re-running the full parse every bar.
 // ════════════════════════════════════════════════════════════════════
 
 var float _cached_regime_lv = na
+var float _rc_zg = na
+var float _rc_bs = na
 
 if barstate.isfirst
     _rc_u   = str.split(in_data, "\n")
     _rc_d   = array.new<string>()
     _rc_zg_raw  = str.trim(resolve_value(_rc_u, _rc_d, "Zero Gamma"))
     _rc_zg_clean = str.length(_rc_zg_raw) > 0 and str.substring(_rc_zg_raw, str.length(_rc_zg_raw) - 1, str.length(_rc_zg_raw)) == "?" ? str.substring(_rc_zg_raw, 0, str.length(_rc_zg_raw) - 1) : _rc_zg_raw
-    _rc_zg  = pnum(_rc_zg_clean)
-    _rc_bs  = pnum(resolve_value(_rc_u, _rc_d, "Basis Shift"))
-    _rc_sh  = apply_basis_shift and not na(_rc_bs) ? _rc_bs : 0.0
-    _cached_regime_lv := not na(_rc_zg) ? _rc_zg + _rc_sh : float(na)
+    _rc_zg  := pnum(_rc_zg_clean)
+    _rc_bs  := pnum(resolve_value(_rc_u, _rc_d, "Basis Shift"))
+
+_rc_sh = 0.0
+if in_basis_shift_mode == "Auto"
+    if not na(_dynamic_basis)
+        _rc_sh := _dynamic_basis
+    else if apply_basis_shift and not na(_rc_bs)
+        _rc_sh := _rc_bs
+else if apply_basis_shift
+    _rc_sh := not na(_rc_bs) ? _rc_bs : 0.0
+
+_cached_regime_lv := not na(_rc_zg) ? _rc_zg + _rc_sh : float(na)
 
 // Per-bar regime background tint
 bgcolor(
@@ -906,7 +935,15 @@ if barstate.islast
 
     // — Resolve basis shift: spot → futures offset —
     raw_shift   = pnum(in_basis_shift)
-    basis_shift = apply_basis_shift and not na(raw_shift) ? raw_shift : 0.0
+    
+    basis_shift = 0.0
+    if in_basis_shift_mode == "Auto"
+        if not na(_dynamic_basis)
+            basis_shift := _dynamic_basis
+        else if apply_basis_shift and not na(raw_shift)
+            basis_shift := raw_shift
+    else if apply_basis_shift
+        basis_shift := not na(raw_shift) ? raw_shift : 0.0
 
     // — Parse Zero Gamma: strip trailing "?" which signals a candidate flip
     //   (no confirmed zero-crossing; pipeline reports the least-negative strike) —
