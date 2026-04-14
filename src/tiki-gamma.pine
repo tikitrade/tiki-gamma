@@ -304,9 +304,11 @@ show_proximity     = input.bool(true,  "Proximity Highlighting",     group=GRP_V
 // ── Style ─────────────────────────────────────────────────────────
 
 var string GRP_STYLE = "Style"
-line_wid             = input.int(1,          "Line Width",                   group=GRP_STYLE, minval=1, maxval=5)
+line_wid_min         = input.int(1,          "Min Line Width",               group=GRP_STYLE, minval=1, maxval=5, tooltip="Line width for the weakest ranked levels (when scaled).")
+line_wid_max         = input.int(5,          "Max Line Width",               group=GRP_STYLE, minval=1, maxval=10, tooltip="Line width for the strongest ranked levels (when scaled).")
+line_wid_def         = input.int(1,          "Default Line Width",           group=GRP_STYLE, minval=1, maxval=10, tooltip="Line width for structural/unranked levels (e.g. Expected Move, Open Price, Zero Gamma).")
 strength_line_width  = input.bool(true,      "Strength → Line Width",        group=GRP_STYLE,
-     tooltip="Scales line width by level strength. Strongest levels draw at the full Line Width; weaker levels draw thinner.\n\nStrength is peer-relative within each category: Call/Put Walls compare by their respective directional GEX; Absolute Gamma by total GEX (call + put); Large Gamma by absolute net GEX. A wall at 75% means its GEX is 75% of the strongest wall in that same group.")
+     tooltip="Scales line width by level strength. Strongest levels draw at Max Line Width; weaker levels draw thinner down to Min Line Width.\n\nStrength is peer-relative within each category: Call/Put Walls compare by their respective directional GEX; Absolute Gamma by total GEX (call + put); Large Gamma by absolute net GEX. A wall at 75% means its GEX is 75% of the strongest wall in that same group.")
 use_strength_opacity = input.bool(true,      "Strength → Opacity",           group=GRP_STYLE,
      tooltip="Scales line and zone opacity by level strength. Weaker levels appear more transparent. Works in conjunction with the base Level Opacity setting.")
 show_gex_magnitude   = input.bool(true,     "GEX Magnitude in Labels",      group=GRP_STYLE,
@@ -315,8 +317,8 @@ show_vol_resilience  = input.bool(false,     "Vol Resilience in Labels",     gro
      tooltip="Appends ↑ or ↓ to ranked level labels based on the volResilience field in the paste data.\n\n↑ = level strengthens under IV expansion (dealers hedge harder into it).\n↓ = level dissolves when VIX spikes.\n\nOnly annotates when |volResilience| > 10% — levels below this threshold are vol-neutral and treated as normal S/R. Seeing no arrows at all is common and means all displayed levels behave similarly under a vol spike (low-signal environment).\n\nRequires the 4-tuple paste format: price:strength:volResilience:magnitude.")
 show_zones           = input.bool(true,      "Level Zones",                  group=GRP_STYLE,
      tooltip="Draws a shaded band above and below each level line to visualise its influence zone. Zone height is controlled by 'Zone Height (ticks)'.")
-zone_ticks           = input.int(4,          "Zone Height (ticks)",          group=GRP_STYLE, minval=1, maxval=50,
-     tooltip="Half-height of each level's zone band, in ticks. Total band height is 2× this value. Adjust to your instrument's typical tick granularity.")
+zone_pts             = input.float(1.00,      "Zone Height (pts)",            group=GRP_STYLE, minval=0.01, maxval=50.0, step=0.01,
+     tooltip="Half-height of each level's zone band, in points. Total band height is 2× this value. Proximity highlighting activates when price enters this band.")
 lbl_align            = input.string("Left", "Label Alignment",            group=GRP_STYLE,
      options=["Last Bar", "Left"], tooltip="Last Bar: anchored to the last bar + offset. Left: anchored to the left chart edge (follows scroll).")
 lbl_format           = input.string("Full", "Label Format",                  group=GRP_STYLE,
@@ -380,10 +382,11 @@ col_imp     = input.color(color.new(#FF9200, 0),  "Implied Move",             gr
 col_imp2sd  = input.color(color.new(#EA5752, 0),  "Implied Move 2SD",         group=GRP_COL)
 col_under   = input.color(color.new(#777777, 0),  "Underlying Price",         group=GRP_COL)
 col_open    = input.color(color.new(#FF9200, 0),  "Open Price",               group=GRP_COL)
-level_opac  = input.int(100,                      "Level Opacity",            group=GRP_COL, minval=0, maxval=100,
-     tooltip="Base opacity for level lines. 100 = fully opaque, 0 = invisible. When Strength → Opacity is enabled, weaker levels scale down from this value.")
-zone_opac   = input.int(25,                       "Zone Opacity",             group=GRP_COL, minval=0, maxval=100,
-     tooltip="Opacity of the shaded zone bands around levels. 0 = invisible, 100 = fully opaque.")
+line_opac_min= input.int(40,                      "Min Line Opacity",         group=GRP_COL, minval=0, maxval=100, tooltip="Opacity for the weakest ranked levels (when scaled). 100 = fully opaque.")
+line_opac_max= input.int(100,                     "Max Line Opacity",         group=GRP_COL, minval=0, maxval=100, tooltip="Opacity for the strongest ranked levels.")
+line_opac_def= input.int(100,                     "Default Line Opacity",     group=GRP_COL, minval=0, maxval=100, tooltip="Opacity for structural/unranked levels (e.g. Expected Move).")
+zone_opac_min= input.int(5,                       "Min Zone Opacity",         group=GRP_COL, minval=0, maxval=100, tooltip="Zone opacity for the weakest ranked levels (when scaled).")
+zone_opac_max= input.int(25,                      "Max/Default Zone Opacity", group=GRP_COL, minval=0, maxval=100, tooltip="Zone opacity for strongly ranked or structural levels.")
 
 
 // ── Visual Effects ──────────────────────────────────────────────────
@@ -648,9 +651,9 @@ bgcolor(
 // eff_wid:         computed line width (strength-scaled or fixed)
 // eff_line_opac:   line opacity 0–100
 // eff_zone_opac:   zone fill opacity 0–100 (proximity-boosted or normal)
-// eff_zone_ticks:  zone half-height in ticks (max-pain-scaled or normal)
+// eff_zone_pts:  zone half-height in points (max-pain-scaled or normal)
 // Returns [line, label, box] — label/box may be na if disabled.
-draw_hlevel(price, col, lbl, lstyle, eff_wid, eff_line_opac, eff_zone_opac, eff_zone_ticks) =>
+draw_hlevel(price, col, lbl, lstyle, eff_wid, eff_line_opac, eff_zone_opac, eff_zone_pts) =>
     _line_col = color.new(col, 100 - eff_line_opac)
     ln = line.new(bar_index, price, bar_index + 1, price,
          extend=extend.both, color=_line_col, width=eff_wid, style=lstyle)
@@ -696,8 +699,7 @@ draw_hlevel(price, col, lbl, lstyle, eff_wid, eff_line_opac, eff_zone_opac, eff_
             size      = lbl_size
             )
     if show_zones
-        ht = eff_zone_ticks * syminfo.mintick / 2
-        bx := box.new(bar_index, price + ht, bar_index + 1, price - ht,
+        bx := box.new(bar_index, price + eff_zone_pts, bar_index + 1, price - eff_zone_pts,
              border_color = color.new(col, 100),
              bgcolor      = color.new(col, 100 - eff_zone_opac),
              extend       = extend.both)
@@ -957,7 +959,7 @@ if barstate.islast
         hi = math.max(t_lo, t_hi)
         bx = box.new(bar_index, hi, bar_index + 1, lo,
              border_color = color.new(col_zgamma, 100),
-             bgcolor      = color.new(col_zgamma, 100 - zone_opac),
+             bgcolor      = color.new(col_zgamma, 100 - zone_opac_max),
              extend       = extend.both)
         array.push(all_boxes, bx)
 
@@ -1029,21 +1031,21 @@ if barstate.islast
         p = pnum(in_vanna)
         if not na(p)
             push_level(lv_prices, lv_labels, lv_colors, lv_styles, lv_strengths, lv_is_mp,
-                 p, format_name("Vanna Inflection", lbl_format), col_vanna, line.style_dashed, 1.0, false)
+                 p, format_name("Vanna Inflection", lbl_format), col_vanna, line.style_dashed, -1.0, false)
 
     // — Speed Trap —
     if show_speed_trap
         p = pnum(in_speed_trap)
         if not na(p)
             push_level(lv_prices, lv_labels, lv_colors, lv_styles, lv_strengths, lv_is_mp,
-                 p, format_name("Speed Trap", lbl_format), col_strap, line.style_dashed, 1.0, false)
+                 p, format_name("Speed Trap", lbl_format), col_strap, line.style_dashed, -1.0, false)
 
     // — Max Pain —
     if show_max_pain
         p = pnum(in_max_pain)
         if not na(p)
             push_level(lv_prices, lv_labels, lv_colors, lv_styles, lv_strengths, lv_is_mp,
-                 p, format_name("Max Pain", lbl_format), col_maxpain, line.style_dashed, 1.0, true)
+                 p, format_name("Max Pain", lbl_format), col_maxpain, line.style_dashed, -1.0, true)
 
     // — Zero Gamma —
     if show_zero_gamma
@@ -1052,16 +1054,16 @@ if barstate.islast
             _zg_lbl   = _zg_is_candidate ? "Flip Candidate" : format_name("Zero Gamma", lbl_format)
             _zg_style = _zg_is_candidate ? line.style_dotted : get_style(line_style_zero)
             push_level(lv_prices, lv_labels, lv_colors, lv_styles, lv_strengths, lv_is_mp,
-                 p, _zg_lbl, col_zgamma, _zg_style, 1.0, false)
+                 p, _zg_lbl, col_zgamma, _zg_style, -1.0, false)
 
     // — Transition Bounds —
     if show_transition
         if not na(t_lo)
             push_level(lv_prices, lv_labels, lv_colors, lv_styles, lv_strengths, lv_is_mp,
-                 t_lo, format_name("Gamma Transition Lower", lbl_format), col_zgamma, get_style(line_style_zero), 1.0, false)
+                 t_lo, format_name("Gamma Transition Lower", lbl_format), col_zgamma, get_style(line_style_zero), -1.0, false)
         if not na(t_hi)
             push_level(lv_prices, lv_labels, lv_colors, lv_styles, lv_strengths, lv_is_mp,
-                 t_hi, format_name("Gamma Transition Upper", lbl_format), col_zgamma, get_style(line_style_zero), 1.0, false)
+                 t_hi, format_name("Gamma Transition Upper", lbl_format), col_zgamma, get_style(line_style_zero), -1.0, false)
 
     // — Max Total Levels Cap: Sort strike levels by proximity to current price and trim —
     n_strikes = array.size(lv_prices)
@@ -1091,44 +1093,44 @@ if barstate.islast
         p = pnum(in_exp_upper)
         if not na(p)
             push_level(lv_prices, lv_labels, lv_colors, lv_styles, lv_strengths, lv_is_mp,
-                 p, format_name("Expected Move Upper", lbl_format), col_exp, get_style(line_style_moves), 1.0, false)
+                 p, format_name("Expected Move Upper", lbl_format), col_exp, get_style(line_style_moves), -1.0, false)
         p := pnum(in_exp_lower)
         if not na(p)
             push_level(lv_prices, lv_labels, lv_colors, lv_styles, lv_strengths, lv_is_mp,
-                 p, format_name("Expected Move Lower", lbl_format), col_exp, get_style(line_style_moves), 1.0, false)
+                 p, format_name("Expected Move Lower", lbl_format), col_exp, get_style(line_style_moves), -1.0, false)
 
     // — Extreme Move —
     if show_ext_move
         p = pnum(in_ext_upper)
         if not na(p)
             push_level(lv_prices, lv_labels, lv_colors, lv_styles, lv_strengths, lv_is_mp,
-                 p, format_name("Extreme Move Upper", lbl_format), col_ext, get_style(line_style_moves), 1.0, false)
+                 p, format_name("Extreme Move Upper", lbl_format), col_ext, get_style(line_style_moves), -1.0, false)
         p := pnum(in_ext_lower)
         if not na(p)
             push_level(lv_prices, lv_labels, lv_colors, lv_styles, lv_strengths, lv_is_mp,
-                 p, format_name("Extreme Move Lower", lbl_format), col_ext, get_style(line_style_moves), 1.0, false)
+                 p, format_name("Extreme Move Lower", lbl_format), col_ext, get_style(line_style_moves), -1.0, false)
 
     // — Implied Move —
     if show_imp_move
         p = pnum(in_imp_upper)
         if not na(p)
             push_level(lv_prices, lv_labels, lv_colors, lv_styles, lv_strengths, lv_is_mp,
-                 p, format_name("Implied Move Upper", lbl_format), col_imp, get_style(line_style_moves), 1.0, false)
+                 p, format_name("Implied Move Upper", lbl_format), col_imp, get_style(line_style_moves), -1.0, false)
         p := pnum(in_imp_lower)
         if not na(p)
             push_level(lv_prices, lv_labels, lv_colors, lv_styles, lv_strengths, lv_is_mp,
-                 p, format_name("Implied Move Lower", lbl_format), col_imp, get_style(line_style_moves), 1.0, false)
+                 p, format_name("Implied Move Lower", lbl_format), col_imp, get_style(line_style_moves), -1.0, false)
 
     // — Implied Move 2SD —
     if show_imp_2sd
         p = pnum(in_imp2sd_upper)
         if not na(p)
             push_level(lv_prices, lv_labels, lv_colors, lv_styles, lv_strengths, lv_is_mp,
-                 p, format_name("Implied Move 2SD Upper", lbl_format), col_imp2sd, get_style(line_style_moves), 1.0, false)
+                 p, format_name("Implied Move 2SD Upper", lbl_format), col_imp2sd, get_style(line_style_moves), -1.0, false)
         p := pnum(in_imp2sd_lower)
         if not na(p)
             push_level(lv_prices, lv_labels, lv_colors, lv_styles, lv_strengths, lv_is_mp,
-                 p, format_name("Implied Move 2SD Lower", lbl_format), col_imp2sd, get_style(line_style_moves), 1.0, false)
+                 p, format_name("Implied Move 2SD Lower", lbl_format), col_imp2sd, get_style(line_style_moves), -1.0, false)
 
     // — Underlying Price —
     if show_underlying
@@ -1140,7 +1142,7 @@ if barstate.islast
                  ? "Updated at " + u_time_local + " (" + display_tz_label + ") — " + str.tostring(u_price)
                  : u_base + " (" + str.tostring(u_price) + ")"
             push_level(lv_prices, lv_labels, lv_colors, lv_styles, lv_strengths, lv_is_mp,
-                 u_price, u_lbl, col_under, line.style_dashed, 1.0, false)
+                 u_price, u_lbl, col_under, line.style_dashed, -1.0, false)
 
     // — Open Price —
     if show_open
@@ -1152,7 +1154,7 @@ if barstate.islast
                  ? "Open at " + o_time_local + " (" + display_tz_label + ") — " + str.tostring(o_price)
                  : o_base + " (" + str.tostring(o_price) + ")"
             push_level(lv_prices, lv_labels, lv_colors, lv_styles, lv_strengths, lv_is_mp,
-                 o_price, o_lbl, col_open, line.style_dashed, 1.0, false)
+                 o_price, o_lbl, col_open, line.style_dashed, -1.0, false)
 
     // — Apply basis shift: add offset to every collected price —
     if basis_shift != 0.0
@@ -1168,7 +1170,7 @@ if barstate.islast
                 box.delete(array.pop(all_boxes))
             bx_s = box.new(bar_index, hi_s, bar_index + 1, lo_s,
                  border_color = color.new(col_zgamma, 100),
-                 bgcolor      = color.new(col_zgamma, 100 - zone_opac),
+                 bgcolor      = color.new(col_zgamma, 100 - zone_opac_max),
                  extend       = extend.both)
             array.push(all_boxes, bx_s)
 
@@ -1406,9 +1408,8 @@ if barstate.islast
     n_lv    = array.size(lv_prices)
     lv_near = array.new<bool>(n_lv, false)
     if show_proximity and n_lv > 0
-        _zone_half = zone_ticks * syminfo.mintick
         for i = 0 to n_lv - 1
-            if math.abs(close - array.get(lv_prices, i)) <= _zone_half
+            if math.abs(close - array.get(lv_prices, i)) <= zone_pts
                 array.set(lv_near, i, true)
 
     // — HUD: nearest walls for distance display (post-shift prices) —
@@ -1427,9 +1428,8 @@ if barstate.islast
                 nearest_pw := na(nearest_pw) or _p > nearest_pw ? _p : nearest_pw
 
     // Proximity flags for HUD row highlighting
-    _hud_zone_half = zone_ticks * syminfo.mintick
-    cw_at_level = not na(nearest_cw) and math.abs(close - nearest_cw) <= _hud_zone_half
-    pw_at_level = not na(nearest_pw) and math.abs(close - nearest_pw) <= _hud_zone_half
+    cw_at_level = not na(nearest_cw) and math.abs(close - nearest_cw) <= zone_pts
+    pw_at_level = not na(nearest_pw) and math.abs(close - nearest_pw) <= zone_pts
 
     // — Draw all merged levels — one line/label/box per unique price —
     if n_lv > 0
@@ -1443,22 +1443,32 @@ if barstate.islast
             is_near = array.get(lv_near,      i)
 
             // Effective line width: strength-proportional or fixed
-            eff_w = strength_line_width ?
-                 math.max(1, math.round(1.0 + str_val * float(line_wid - 1))) :
-                 line_wid
+            eff_w = line_wid_def
+            if str_val >= 0.0
+                eff_w := strength_line_width ?
+                     math.max(1, math.round(float(line_wid_min) + str_val * float(line_wid_max - line_wid_min))) :
+                     line_wid_max
 
-            // Effective line opacity: strength-scaled from base level_opac
-            eff_lo = use_strength_opacity ?
-                 math.max(10, math.round(str_val * level_opac)) :
-                 level_opac
+            // Effective line opacity: strength-scaled or fixed
+            eff_lo = line_opac_def
+            if str_val >= 0.0
+                eff_lo := use_strength_opacity ?
+                     math.max(0, math.round(float(line_opac_min) + str_val * float(line_opac_max - line_opac_min))) :
+                     line_opac_max
 
-            // Effective zone opacity: boosted when price is at this level
-            eff_opac = show_proximity and is_near ? proximity_zone_opac : zone_opac
+            // Effective zone opacity: strength-scaled or fixed
+            base_zone_opac = zone_opac_max
+            if str_val >= 0.0
+                base_zone_opac := use_strength_opacity ?
+                     math.max(0, math.round(float(zone_opac_min) + str_val * float(zone_opac_max - zone_opac_min))) :
+                     zone_opac_max
+
+            eff_opac = show_proximity and is_near ? proximity_zone_opac : base_zone_opac
 
             // Effective zone height: max pain expands near close
-            eff_zt = is_mp ? math.max(1, math.round(zone_ticks * mp_mult)) : zone_ticks
+            eff_z_pts = is_mp ? zone_pts * mp_mult : zone_pts
 
-            [ln, lb, bx] = draw_hlevel(p, col, lbl, sty, eff_w, eff_lo, eff_opac, eff_zt)
+            [ln, lb, bx] = draw_hlevel(p, col, lbl, sty, eff_w, eff_lo, eff_opac, eff_z_pts)
             add_level(ln, lb, bx, all_lines, all_labels, all_boxes)
 
     // — HUD Dashboard —
