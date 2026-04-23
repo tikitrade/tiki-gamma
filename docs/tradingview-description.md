@@ -67,7 +67,7 @@ The indicator features deep customisation via its settings panel, grouped for ea
 
 Paste the full level payload from Tikitrade into the indicator's text input. Each level accepts optional metadata — strength, vol resilience, and GEX magnitude — so the indicator reflects the full depth of the pipeline output, not just price levels.
 
-Free daily SPX/ES reference levels are available at [url=https://tikitrade.com/gamma]tikitrade.com/gamma[/url]. For real-time levels refreshed from the live options chain across all supported symbols and professional composite data (SPX+SPY, NDX+QQQ), a Tikitrade membership is required at [url=https://tikitrade.com]tikitrade.com[/url].
+Free daily SPX/ES reference levels are available at [url=https://tikitrade.com/gamma]tikitrade.com/gamma[/url].
 
 [b]Open Source[/b]
 
@@ -86,5 +86,8 @@ Options, Gamma, GEX, Futures, Dealer Hedging, Support Resistance, SPX, ES, Marke
 
 - Publish as **open source** (eligible for Staff Picks and Editor's Picks)
 - Screenshot: ES chart, teal regime background, call wall rejection overhead, key gamma strike visible, HUD active
+- Respond to every comment in the first 48 hours (algorithmic ranking signal)
+- Do not mention competitors by name
+hot: ES chart, teal regime background, call wall rejection overhead, key gamma strike visible, HUD active
 - Respond to every comment in the first 48 hours (algorithmic ranking signal)
 - Do not mention competitors by name

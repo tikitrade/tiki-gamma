@@ -211,10 +211,6 @@
 //
 // Paste levels from Tikitrade (tikitrade.com) into the "Level Data"
 // input. Free SPX levels are available at https://tikitrade.com/gamma.
-// Professional composite levels (SPX+SPY, NDX+QQQ) and automated
-// periodic updates require a Tikitrade membership.
-//
-// View membership details at https://tikitrade.com.
 //
 // ════════════════════════════════════════════════════════════════════
 // LICENSE
