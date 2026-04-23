@@ -274,10 +274,10 @@ show_price_axis    = input.bool(true,  "Price Axis Labels",          group=GRP_V
 show_labels        = input.string("Level", "Labels",                  group=GRP_VIS,
      options=["Level", "Price", "Level & Price", "Off"],
      tooltip="What to show in level labels.\n\nLevel: name only (e.g. 'Call Wall 1').\nPrice: price only (e.g. '5800').\nLevel & Price: both (e.g. 'Call Wall 1 (5800)').\nOff: hide all labels.")
-in_basis_shift_mode = input.string("Prior Bar", "Apply Basis Shift", options=["Prior Bar", "Session Open", "Off"], group=GRP_VIS,
+in_basis_shift_mode = input.string("Session Open", "Apply Basis Shift", options=["Prior Bar", "Session Open", "Off"], group=GRP_VIS,
      tooltip="When Prior Bar, the indicator will dynamically calculate the real-time exact shift using the prior close for ES/MES and NQ/MNQ. When Session Open, it strictly uses the 'Basis Shift' from your pasted payload (representing the snapshot start-of-session basis). Select 'Off' to plot raw levels.")
 apply_basis_shift = switch in_basis_shift_mode
-    "Session Open" => true
+    "Session Open"  => syminfo.type == "futures"
     "Prior Bar"     => syminfo.type == "futures"
     => false
 show_regime_bg     = input.bool(false, "Regime Background Tint",     group=GRP_VIS,
