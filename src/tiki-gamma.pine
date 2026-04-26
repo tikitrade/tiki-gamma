@@ -1,59 +1,13 @@
-// @version=6                                               
-//                                         ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓                                               
-//                                  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒░░    ░░▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓                                         
-//                                ▒▓▓▓▓▓░                            ░▓▓▓▓▓▓▓▓▓                                    
-//                         ▓░      ▒▓▓▓▒                                   ▒▓▓▓▓▓▓▓                                
-//                           ░▓▓▒  ▓▓  ▒▓▓░                                    ▓▓▓▓▓▓▓                             
-//                    ▓▓▓▓      ▒▓▓▓▓     ▒▓▓▓▒▒▒▒▓▓▓▓▓▓▓▓▓▓▒                     ▒▓▓▓▓▓                           
-//                 ▓▓▓▓▓▓▓▓       ▓▓▓▓                       ▒▓▓▒                    ▒▓▓▓▓▓                        
-//               ▓▓▓▓▓▒  ░▓░        ░▒░                         ░▓▓                    ░▓▓▓▓▓                      
-//              ▓▓▓▓░    ▓▓                                       ▒▓▓                    ░▓▓▓▓                     
-//            ▓▓▓▓▒     ▓▓                    ▒▓▒░            ▓▓▓▒  ▓▓                     ▒▓▓▓▓                   
-//          ▓▓▓▓▓      ░▓░                     ▓▓▓▓▓▓▓▓▓▓▓▒░  ▒▓▓▓▓▓▓▓                       ▒▓▓▓▓                 
-//         ▓▓▓▓░       ▓▓                      ▓▓▒       ░▓▓▓▒▓▓     ▒▓▓░                     ░▓▓▓▓                
-//        ▓▓▓▓        ▓▓▓░        ▓▓▒         ▒▒              ░░        ▒▓▓                     ▓▓▓▓               
-//       ▓▓▓▓        ░▓▒ ▒░       ▓░   ░▓▓▓▓▓                             ▒▓▓                    ▓▓▓▓              
-//      ▓▓▓▓          ▓▓         ▓▒                                         ▓▓                    ▓▓▓▓             
-//     ▓▓▓▓            ░▓▓      ▒▓▒               ░▒▒░░                     ▓▓                     ▓▓▓▓            
-//    ▓▓▓▓                ▓▓░             ░▓▓▒░           ▒▓▓░      ▒▓▓▓▓▒░░▒▓▓▓                    ▓▓▓▓           
-//    ▓▓▓▒                 ▓▒          ▓▓▒                    ░▓▓▓▓▓▓           ▓▓░                 ▒▓▓▓           
-//   ▓▓▓▓                   ▓▓       ▓▓                          ░▒               ▓▓                 ▓▓▓▓          
-//   ▓▓▓▓                 ▓▓░       ▓▓          ░▒▒▓▓▓▓▒░                    ░▒▒▒░▓▓░                ▓▓▓▓          
-//   ▓▓▓▓                ▓▓         ▓       ▓▓▓▒          ▓▓▓             ▒▓▓▒     ▒▓▒               ▓▓▓▓          
-//   ▓▓▓                 ░▓▓        ▓      ▓▓                ░▓░         ▓▓          ▓▓               ▓▓▓          
-//   ▓▓▓                   ▓▓▒      ▓     ░▓     ▒▒▓▓▓▓▓░      ▒▓       ▒▓     ▒     ░▓░              ▓▓▓          
-//   ▓▓▓                  ▓▒        ░▓    ░▓              ▓░     ▓      ▒▒   ░      ░▓▓               ▓▓▓          
-//   ▓▓▓                  ▓▓         ▓▓▓░ ▓▓▓                    ▒▒     ▒▒  ░     ▓▓▓▓▒               ▓▓▓          
-//   ▓▓▓▓                   ░▓▓▒      ▒▓▓▓▓▓▒▒▒▒▒▓▓▓▓▓▓▓▒         ▓      ▒     ▒▓      ▓▓░           ▓▓▓▓          
-//   ▓▓▓▓                    ▓▒         ▓              ░▓▓▓▓▓▒    ▓▓          ▓          ▓▓          ▓▓▓▓          
-//   ▓▓▓▓                   ░▓░          ▓                ▓▓▓▓▓▓▓▓▓▓▓     ░▒▓▓           ▓▓          ▓▓▓▓          
-//    ▓▓▓▒                   ▒▓▓▓▓▓       ▒                 ▓▓▓▓    ▓      ▒ ░▒         ▓▒          ▒▓▓▓           
-//    ▓▓▓▓                      ░▓░        ░▓      ▒         ▒▓                ▒       ▓▒           ▓▓▓▓           
-//     ▓▓▓▓                     ░▓▒         ▒▒     ▓▓▓▓▒       ▒               ▒   ▒  ▒▓           ▓▓▓▓            
-//      ▓▓▓▓                      ░▓▓▓       ▒▒    ▓▓▓▓▓▓▓▓      ░▒           ░   ▓▓▒  ▓▒         ▓▓▓▓             
-//       ▓▓▓▓                      ▓▓         ▒░   ▓▓▓▓▓▓▓▓▓▓▓                  ▒  ▓▓  ▓▓        ▓▓▓▓              
-//        ▓▓▓▓                      ▓▓▓▓       ▓   ▓▓▓▓▓▓▓▓▓▓▓  ▒▓░         ░▓▓▓▓  ▓▓▒  ▓░      ▓▓▓▓               
-//         ▓▓▓▓░                    ░▓░        ▒▒   ▓▓▓▓▓▓▓▓▓   ▓▓▓▓▓▓▓▓▓  ░▓▓▓▓▓░ ▒▓▓  ▓▓    ░▓▓▓▓                
-//          ▓▓▓▓▓                    ▓▓▓       ░▒   ▒▓▓▓▓▓▓▓▓  ▒▒▒▒▒▒░░░░   ░░░░▒░ ░▓▒  ▓▓   ▒▓▓▓▓                 
-//            ▓▓▓▓▒                  ░▓▓        ▓                                       ▓▒ ▒▓▓▓▓                   
-//             ▓▓▓▓▓░                ▓▓░        ▓         ░▒░  ▓▓▓▓▓▓▓▓▓▓  ▒▓▓▓▓▓  ▓▒  ▓▓▓▓▓▓▓▓                    
-//               ▓▓▓▓▓░                ▓▓▓      ▓      ▒▓▓▓▓░  ▓▓▓▓▓▓▓▓▓▓  ▓▓▓▓▓▒  ▓   ▓▓▓▓▓▓                      
-//                 ▓▓▓▓▓▒             ▓▓        ▓        ░▓▓▒  ▓▓▓▓▓▓▓▓▓  ░▓▓▓▓▓      ▓▓▓▓▓                        
-//                    ▓▓▓▓▓▒          ▓▓▒       ▓              ░▓▓▓▓▓▓▓   ▓▓▓▒      ▒▓▓▓                           
-//                      ▓▓▓▓▓▓▓         ▓▓▓▓▓▓▓▓▓▓▒▒▒▒▒▒▒                          ▓▓▓                             
-//                         ▓▓▓▓▓▓▓▒                      ▒▓▓░                   ▒▓▓▓▓                              
-//                             ▓▓▓▓▓▓▓▓▓░                   ▒▓▓              ░▓▓▓▓▓                                
-//                                  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒░░    ░░▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓                                    
-//                                         ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓                                                                                                                                                    
-//                                                                                                                                          
+//@version=6        
+//                                      
 // ══════════════════════════════════════════════════════════════════════════════════════════════════════
-// TIKI GAMMA - Open Source TradingView gamme levels indicator by Tikitrade (tikitrade.com)
+// TIKI GAMMA - Open Source TradingView gamma levels indicator
 // ══════════════════════════════════════════════════════════════════════════════════════════════════════
 //
-// Visualise the full Tikitrade options market structure directly on
-// your TradingView chart.  Since Pine Script cannot call external
-// APIs, levels are pasted from the Tikitrade platform into the
-// "Paste Levels Here" text area.
+// Visualise options market structure directly on your TradingView chart.
+// Since Pine Script cannot call external APIs to fetch options data,
+// this script plots levels that are manually pasted into the 
+// "Level Data" text area.
 //
 // ── WHAT IT DRAWS ────────────────────────────────────────────────
 //
@@ -129,7 +83,7 @@
 //  Underlying           →  price, optionally with UTC update time
 //                          "661.43 @ 16:00"
 //
-// ── EXAMPLE COPY FORMAT FROM TIKITRADE ───────────────────────
+// ── EXAMPLE COPY FORMAT ──────────────────────────────────────────
 //
 // Call Walls:              5800:92:18:380, 5850:74:-3:210
 // Put Walls:               5700:95:-8:290, 5650:71:2:145
@@ -156,68 +110,57 @@
 // ════════════════════════════════════════════════════════════════════
 //
 // Options dealers (market makers) hedge their books continuously.
-// When you buy an option, the dealer who sold it must buy or sell the
-// underlying to stay delta-neutral — every tick, all session.  At
-// strikes where large open interest concentrates, this hedging is
-// large enough to influence price directly.
+// Theoretical models suggest that at strikes where large open interest
+// concentrates, this hedging may be large enough to influence price.
 //
-// GEX (Gamma Exposure) measures the dollar magnitude of that hedging
-// per unit of price move.  Tiki Gamma locates the strikes where GEX
-// is large enough to matter and classifies each by its behavior.
+// GEX (Gamma Exposure) estimates the dollar magnitude of that hedging
+// per unit of price move. This script visualises strikes where GEX
+// is theoretically significant, based on the data provided to it.
 //
-// CALL WALLS      Dealers are typically net short calls.  As price
-//                 rallies toward a call wall, rising delta forces them
-//                 to sell the underlying on every tick — consistent,
-//                 mechanical resistance.
+// CALL WALLS      Dealers are typically assumed to be net short calls.
+//                 As price rallies toward a call wall, rising delta may
+//                 lead them to sell the underlying, potentially
+//                 acting as resistance.
 //
-// PUT WALLS       Dealers are typically net short puts.  Falling price
-//                 forces them to buy, providing support.  Warning: when
-//                 a put wall breaks, dealers unwind their long hedge
-//                 rapidly, adding fuel to the drop.
+// PUT WALLS       Dealers are typically assumed to be net short puts.
+//                 Falling price may lead them to buy, potentially
+//                 providing support. If a put wall breaks, unwinding
+//                 hedges may potentially accelerate a drop.
 //
-// ZERO GAMMA      The exact price where net dealer gamma crosses zero.
-//                 Above it: dealers sell into rallies and buy dips —
-//                 a natural stabiliser.  Below it: dealers buy into
-//                 rallies and sell dips — amplifying every move.
-//                 This is the primary regime filter.
+// ZERO GAMMA      The theoretical price where net dealer gamma crosses
+//                 zero. Above it: hedging may act as a stabiliser.
+//                 Below it: hedging may amplify moves. Often watched
+//                 as a potential regime filter.
 //
 // VANNA           Measures how a position's delta changes as implied
-//                 volatility changes.  When IV spikes, dealers with
-//                 vanna exposure must rehedge even without price moving.
-//                 The Vanna Inflection marks where this concentration
-//                 is highest — most dangerous on gap opens and VIX
-//                 expansion days.
+//                 volatility changes. The Vanna Inflection marks where
+//                 this concentration is highest — often monitored on
+//                 gap opens and VIX expansion days.
 //
-// SPEED TRAP      Where put/call GEX asymmetry becomes extreme on the
-//                 downside.  A small move lower triggers a
-//                 disproportionate wave of forced dealer selling — the
-//                 level that turns a pullback into a flush.
+// SPEED TRAP      Where put/call GEX asymmetry is theoretically extreme
+//                 on the downside. A move lower here may potentially
+//                 trigger accelerated selling.
 //
 // MAX PAIN        The settlement strike that minimises total payout to
-//                 option holders.  Charm (time decay of delta) causes
-//                 dealers to unwind hedges as expiration approaches,
-//                 creating gravitational pull toward this strike.
-//                 Effect is strongest in the final 60–90 minutes of
-//                 0DTE and OPEX sessions.
+//                 option holders. Charm (time decay of delta) may
+//                 create a gravitational pull toward this strike as
+//                 expiration approaches.
 //
 // VANNA           The volResilience field on each level encodes whether
-// RESILIENCE      the level strengthens (positive) or dissolves
-//                 (negative) when IV expands.  Prefer positive-
-//                 resilience levels as primary S/R during vol events.
+// RESILIENCE      the level theoretically strengthens (positive) or
+//                 dissolves (negative) when IV expands.
 //
 // ════════════════════════════════════════════════════════════════════
 // DATA SOURCE
 // ════════════════════════════════════════════════════════════════════
 //
-// Paste levels from Tikitrade (tikitrade.com) into the "Level Data"
-// input. Free SPX levels are available at https://tikitrade.com/gamma.
+// Paste your formatted level data into the "Level Data" input field.
 //
 // ════════════════════════════════════════════════════════════════════
 // LICENSE
 // ════════════════════════════════════════════════════════════════════
 //
-// MIT License — use, fork, and modify freely.  Attribution appreciated.
-// github.com/tikitrade/tiki-gamma
+// MIT License — use, fork, and modify freely.
 //
 // ════════════════════════════════════════════════════════════════════
 
@@ -228,21 +171,19 @@ indicator("Tiki Gamma", shorttitle="Tiki Gamma", overlay=true,
 // ── Level Data ────────────────────────────────────────────────────
 // Primary input — paste fresh levels here each session.
 
-var string GRP_DATA = "Level Data  (paste from Tikitrade)"
+var string GRP_DATA = "Level Data"
 in_data = input.text_area(
     defval  = "Call Walls:\nPut Walls:\nAbsolute Gamma:\nKey Gamma Strike:\nLarge Gamma:\nVanna Inflection:\nSpeed Trap:\nMax Pain:\nZero Gamma:\nTransition Lower:\nTransition Upper:\nExpected Move Upper:\nExpected Move Lower:\nExtreme Move Upper:\nExtreme Move Lower:\nImplied Move Upper:\nImplied Move Lower:\nImplied Move 2SD Upper:\nImplied Move 2SD Lower:\nUnderlying:\nOpen Price:\nBasis Shift:",
     title   = "Paste Levels Here",
     group   = GRP_DATA,
-    tooltip = "Paste Tikitrade levels — one per line. Get fresh levels at tikitrade.com/gamma\n\nExamples:\n  Call Walls: 5800, 5850\n  Large Gamma: 5795:85, 5785:72\n  Underlying: 661.43 @ 16:00")
-
-
+    tooltip = "Paste your level data — one per line.\n\nExamples:\n  Call Walls: 5800, 5850\n  Large Gamma: 5795:85, 5785:72\n  Underlying: 661.43 @ 16:00")
 
 
 // ── Visibility ────────────────────────────────────────────────────
 
 var string GRP_VIS = "Visibility"
 show_walls         = input.bool(true,  "Walls (Call / Put)",         group=GRP_VIS,
-     tooltip="Call Walls resist upward moves; Put Walls support downward moves. Dealer hedging is the mechanical driver — see header comments for details.")
+     tooltip="Call Walls may act as resistance; Put Walls may act as support based on theoretical dealer hedging — see header comments for details.")
 show_key_gamma     = input.bool(true,  "Key Gamma / Absolute Gamma", group=GRP_VIS,
      tooltip="Key Gamma Strike is the single highest net-gamma strike. Absolute Gamma shows the top total-GEX strikes (call + put combined).")
 show_large_gamma   = input.bool(true,  "Large Gamma",                group=GRP_VIS,
@@ -250,11 +191,11 @@ show_large_gamma   = input.bool(true,  "Large Gamma",                group=GRP_V
 show_vanna         = input.bool(true,  "Vanna Inflection",           group=GRP_VIS,
      tooltip="The strike where vanna (sensitivity of delta to IV) is most concentrated. Most relevant on gap opens and VIX expansion days when dealers must rehedge without price moving.")
 show_speed_trap    = input.bool(true,  "Speed Trap",                 group=GRP_VIS,
-     tooltip="Where put/call GEX asymmetry becomes extreme on the downside. A small move lower here can trigger disproportionate forced dealer selling, turning a pullback into a flush.")
+     tooltip="Where put/call GEX asymmetry is theoretically extreme on the downside. A move lower here may potentially trigger accelerated selling.")
 show_max_pain      = input.bool(true,  "Max Pain",                   group=GRP_VIS,
-     tooltip="The settlement strike that minimises total payout to option holders. Charm (time decay of delta) creates gravitational pull here — effect is strongest in the final 60–90 min of 0DTE and OPEX sessions.")
+     tooltip="The settlement strike that minimises total payout to option holders. Charm (time decay of delta) may create a gravitational pull here as expiration approaches.")
 show_zero_gamma    = input.bool(true,  "Zero Gamma",                 group=GRP_VIS,
-     tooltip="The price where net dealer gamma crosses zero. Above: dealers stabilise (sell rallies, buy dips). Below: dealers amplify (buy rallies, sell dips). The primary regime dividing line.")
+     tooltip="The theoretical price where net dealer gamma crosses zero. Above: hedging may stabilise price. Below: hedging may amplify moves. Often watched as a potential regime filter.")
 show_transition    = input.bool(false, "Transition Zone (Experimental)",            group=GRP_VIS,
      tooltip="[EXPERIMENTAL] The price band around Zero Gamma where regime behaviour transitions. Off by default; enable for a visual buffer around the flip point.")
 show_exp_move      = input.bool(true,  "Expected Move",              group=GRP_VIS,
@@ -1532,7 +1473,7 @@ if barstate.islast
         if not na(hud_table)
             table.cell(hud_table, 0, 0, "NO LEVELS FOUND", text_color=color.white, text_size=hud_size, bgcolor=color.new(col_resist, 20), text_halign=text.align_center)
             table.merge_cells(hud_table, 0, 0, 1, 0)
-            table.cell(hud_table, 0, 1, "Head to tikitrade.com/gamma for free SPX levels", text_color=hud_color, text_size=hud_size, bgcolor=color.new(color.black, 60), text_halign=text.align_center)
+            table.cell(hud_table, 0, 1, "Please provide level data in settings", text_color=hud_color, text_size=hud_size, bgcolor=color.new(color.black, 60), text_halign=text.align_center)
             table.merge_cells(hud_table, 0, 1, 1, 1)
     else if show_hud
         _row = 0
@@ -1542,7 +1483,7 @@ if barstate.islast
             table.cell(hud_table, 0, _row, "LEVELS OUTDATED (>24H)", text_color=color.white, text_size=hud_size, bgcolor=color.new(col_resist, 20), text_halign=text.align_center)
             table.merge_cells(hud_table, 0, _row, 1, _row)
             _row := _row + 1
-            table.cell(hud_table, 0, _row, "Refresh at tikitrade.com/gamma", text_color=hud_color, text_size=hud_size, bgcolor=color.new(color.black, 60), text_halign=text.align_center)
+            table.cell(hud_table, 0, _row, "Please provide fresh levels", text_color=hud_color, text_size=hud_size, bgcolor=color.new(color.black, 60), text_halign=text.align_center)
             table.merge_cells(hud_table, 0, _row, 1, _row)
             _row := _row + 1
 

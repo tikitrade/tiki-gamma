@@ -10,32 +10,32 @@ Tiki Gamma — Options Dealer Levels for Futures & Index Traders
 
 ## Short Description (for search/preview)
 
-Real-time options dealer hedging levels — gamma walls, regime filter, volatility triggers — on your TradingView chart. Free and open source.
+A visual tool for mapping external options dealer hedging levels — gamma walls, regime filter, volatility triggers — on your TradingView chart. Free and open source.
 
 ## Full Description
-Tiki Gamma maps the options dealer hedging levels that shape intraday price action — directly on your chart.
+Tiki Gamma maps the options dealer hedging levels that may influence intraday price action — directly on your chart.
 
-Options dealers hedge trillions in exposure every session. When price approaches a significant strike, they are mechanically forced to buy or sell the underlying on every tick. These flows are systematic, large, and predictable enough to define the structural support and resistance that institutional desks watch as primary reference points.
+Options dealers hedge trillions in exposure every session. They typically hedge by buying or selling the underlying to stay delta-neutral. Theoretical models suggest that at strikes where large open interest concentrates, this hedging may be large enough to influence price. These flows can be systematic and large, and are often watched by institutional desks as potential structural support and resistance reference points.
 
-This indicator draws those levels. It does not repaint. It is not a lagging signal. It visualizes the market structure derived from the live options chain.
+This indicator draws manually provided levels. It does not calculate levels from live options data. It is a visualization tool for external data.
 
 [b]What It Draws[/b]
 
-[b]Call Walls & Put Walls[/b] — Overhead zones where dealer selling is heaviest. Below-market zones where dealer buying provides structural support. Call walls resist more consistently; put walls, when they break, break hard. Line thickness scales with strength so the dominant level is immediately visible.
+[b]Call Walls & Put Walls[/b] — Overhead zones where theoretical dealer selling is heaviest. Below-market zones where theoretical dealer buying provides structural support. Call walls may resist upward moves; put walls, if broken, may lead to accelerated moves. Line thickness scales with strength so the dominant level is immediately visible.
 
-[b]Zero Gamma Flip[/b] — The single most important regime filter in modern markets. Above it, dealers trade against every move — mean-reverting. Below it, dealers trade with every move — amplifying. One line changes how you size, hold, and manage risk.
+[b]Zero Gamma Flip[/b] — An important regime filter in modern markets. Above it, dealers may trade mean-reverting. Below it, they may trade amplifying.
 
 [b]Expert Configuration[/b] (Signal-to-Noise Ratio) — Ships with optimized configuration for high-conviction trading. We recommend limiting Walls and Absolute Gamma to 3 levels each at 80%+ strength to filter out noise, while keeping Large Gamma at a 5-level, 50% strength threshold to catch secondary intraday pivots.
 
 [b]Gamma Transition Band[/b] (Experimental) — The contested zone around the flip where dealer positioning is mixed. Price action inside this band is inherently noisier. These levels are currently in experimental beta.
 
-[b]Key Gamma Strike & Large Gamma [/b]— The market's gravitational centers. In drift sessions, price magnetizes toward them. In trending sessions, they become checkpoint S/R. Optional strength percentages and GEX magnitude labels show which levels carry real weight.
+[b]Key Gamma Strike & Large Gamma[/b] — Potential areas of interest. Price may gravitate toward them. In trending sessions, they can act as checkpoint S/R. Optional strength percentages and GEX magnitude labels show which levels carry real weight.
 
-[b]Vanna Inflection[/b] — Where an IV expansion triggers forced delta rehedging independent of price movement. The level that matters most on gap opens and VIX events.
+[b]Vanna Inflection[/b] — Where an IV expansion triggers forced delta rehedging independent of price movement. A level that is often monitored during gap opens and VIX events.
 
-[b]Speed Trap[/b] — Where a small downward move creates disproportionate dealer selling. The level that turns a pullback into a flush.
+[b]Speed Trap[/b] — Where a move lower may theoretically create disproportionate dealer selling. A level that may turn a pullback into a flush.
 
-[b]Max Pain[/b] — The settlement gravity point. The zone expands automatically near close as charm-driven delta unwinding strengthens into expiration — the mechanism behind end-of-day pinning behavior.
+[b]Max Pain[/b] — The settlement gravity point. The zone expands automatically near close as charm-driven delta unwinding theoretically strengthens into expiration — reflecting end-of-day pinning behavior.
 
 [b]Expected / Implied Move Bands[/b] — 1-SD and 2-SD statistical envelopes. Inside the box: mean reversion is plausible. Outside it: respect the move.
 
@@ -65,13 +65,11 @@ The indicator features deep customisation via its settings panel, grouped for ea
 
 [b]How It Works[/b]
 
-Paste the full level payload from Tikitrade into the indicator's text input. Each level accepts optional metadata — strength, vol resilience, and GEX magnitude — so the indicator reflects the full depth of the pipeline output, not just price levels.
-
-Free daily SPX/ES reference levels are available at [url=https://tikitrade.com/gamma]tikitrade.com/gamma[/url].
+Paste your formatted level data into the indicator's text input. Each level accepts optional metadata — strength, vol resilience, and GEX magnitude — so the indicator reflects the full depth of the pipeline output, not just price levels.
 
 [b]Open Source[/b]
 
-Full source is published openly. Read it, fork it, learn from it. Every level type is documented in the script header with the dealer mechanics that drive it. Contribute via Github here: [url=https://github.com/tikitrade/tiki-gamma]github.com/tikitrade/tiki-gamma[/url]
+Full source is published openly. Read it, fork it, learn from it. Every level type is documented in the script header with the theoretical dealer mechanics that drive it. The display layer is transparent.
 
 ---
 
@@ -86,8 +84,5 @@ Options, Gamma, GEX, Futures, Dealer Hedging, Support Resistance, SPX, ES, Marke
 
 - Publish as **open source** (eligible for Staff Picks and Editor's Picks)
 - Screenshot: ES chart, teal regime background, call wall rejection overhead, key gamma strike visible, HUD active
-- Respond to every comment in the first 48 hours (algorithmic ranking signal)
-- Do not mention competitors by name
-hot: ES chart, teal regime background, call wall rejection overhead, key gamma strike visible, HUD active
 - Respond to every comment in the first 48 hours (algorithmic ranking signal)
 - Do not mention competitors by name
