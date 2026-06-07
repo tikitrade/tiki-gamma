@@ -248,6 +248,8 @@ strength_line_width  = input.bool(true,      "Strength → Line Width",        g
      tooltip="Scales line width by level strength. Strongest levels draw at Max Line Width; weaker levels draw thinner down to Min Line Width.\n\nStrength is peer-relative within each category: Call/Put Walls compare by their respective directional GEX; Absolute Gamma by total GEX (call + put); Large Gamma by absolute net GEX. A wall at 75% means its GEX is 75% of the strongest wall in that same group.")
 use_strength_opacity = input.bool(true,      "Strength → Opacity",           group=GRP_STYLE,
      tooltip="Scales line and zone opacity by level strength. Weaker levels appear more transparent. Works in conjunction with the base Level Opacity setting.")
+show_strength_pct    = input.bool(true,     "Strength % in Labels",         group=GRP_STYLE,
+     tooltip="Appends the relative strength percentage to ranked level labels — e.g. 'Call Wall 1 (92%)'. On by default.")
 show_gex_magnitude   = input.bool(true,     "GEX Magnitude in Labels",      group=GRP_STYLE,
      tooltip="Adds the raw GEX dollar amount to ranked level labels — e.g. 'Call Wall 1 (92%) $380M'. On by default.\n\nGEX magnitude is product-specific: $380M is significant for QQQ but unremarkable for SPX. Compare within the same symbol, not across symbols.")
 show_vol_resilience  = input.bool(false,     "Vol Resilience in Labels",     group=GRP_STYLE,
@@ -529,7 +531,7 @@ parse_ranked_levels(s, base_label, min_strength_pct, max_levels) =>
                 array.push(strengths,       sval)
                 array.push(vol_resiliences, vr)
                 lbl  = n > 1 ? base_label + " " + str.tostring(i + 1) : base_label
-                if sval > 0.0 and sval < 1.0
+                if show_strength_pct and sval > 0.0 and sval < 1.0
                     lbl := lbl + " (" + str.tostring(math.round(sval * 100)) + "%)"
                 if show_gex_magnitude and not na(mag)
                     lbl := lbl + " " + format_magnitude(math.round(mag))
