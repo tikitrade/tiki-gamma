@@ -34,7 +34,18 @@
 //  3. Drawing Logic: Functions for rendering lines, zones, and labels.
 //  4. Main Execution: Parsing the pasted data and calculating proximities.
 //  5. HUD Rendering: Drawing the on-chart dashboard.
-//  6. Price Axis Plots: Invisible plots to show level prices on the axis.
+//  6. Signals & Alerts: Crossover/pierce detection, markers, webhook payload.
+//  7. Price Axis Plots: Invisible plots to show level prices on the axis.
+//
+// ── ALERTS ───────────────────────────────────────────────────────
+//
+//  One TradingView alert covers every armed level:
+//    Create Alert → Tiki Gamma → "Any alert() function call"
+//  Arming is done in Settings → Signals (All visible / Custom / Nearest only).
+//  TradingView snapshots inputs when the alert is created — recreate the
+//  alert after changing Arm Scope or category toggles.
+//  Default payload is JSON with an `events[]` array (one webhook per bar).
+//  Named price-axis plots remain available for surgical "Crossing" alerts.
 //
 // ── VISUAL FEATURES ──────────────────────────────────────────────
 //
@@ -48,6 +59,8 @@
 //  • HUD Dashboard                — compact overlay: current regime,
 //                                   distance to nearest walls in σ,
 //                                   basis shift; rows light up at level
+//  • Signal markers               — ▲/▼ triangles on armed crossover/pierce
+//                                   bars (optional; does not use plot slots)
 //  • Max Pain Grows Near Close    — zone expands as charm effects
 //                                   strengthen into expiration
 //
@@ -165,7 +178,7 @@
 // ════════════════════════════════════════════════════════════════════
 
 indicator("Tiki Gamma", shorttitle="Tiki Gamma", overlay=true,
-     max_lines_count=200, max_labels_count=200, max_boxes_count=500)
+     max_lines_count=200, max_labels_count=250, max_boxes_count=500)
 
 
 // ── Level Data ────────────────────────────────────────────────────
@@ -225,6 +238,7 @@ show_regime_bg     = input.bool(false, "Regime Background Tint",     group=GRP_V
      tooltip="Tints the chart teal when price is above the gamma flip (mean-reverting regime) and magenta when below (amplifying). Off by default to keep the chart clean; enable for a session-wide visual filter.")
 show_hud           = input.bool(true,  "HUD Dashboard",              group=GRP_VIS,
      tooltip="Compact overlay showing current regime, distance to nearest walls, and basis shift. Rows highlight automatically when price enters a level's zone.")
+show_volatility    = input.bool(true, "Show ATM IV", group=GRP_VIS, tooltip="ATM implied volatility with its Open, 1D, 1W, and 30D changes in volatility points. IV Open is hidden when unavailable (e.g. before 09:30 ET) or when the displayed print is the 09:30 open.")
 hud_dist_mode      = input.string("Points", "HUD Distance Mode",     group=GRP_VIS, options=["Points", "Sigma"],
      tooltip="Points: distance in price units (e.g. +45.2 pts). Sigma: distance in standard deviations (e.g. +1.2σ).")
 hud_pos            = input.string("Top Right", "HUD Position",       group=GRP_VIS,
@@ -241,11 +255,11 @@ show_proximity     = input.bool(true,  "Proximity Highlighting",     group=GRP_V
 // ── Style ─────────────────────────────────────────────────────────
 
 var string GRP_STYLE = "Style"
-line_wid_min         = input.int(1,          "Min Line Width",               group=GRP_STYLE, minval=1, maxval=5, tooltip="Line width for the weakest ranked levels (when scaled).")
-line_wid_max         = input.int(5,          "Max Line Width",               group=GRP_STYLE, minval=1, maxval=10, tooltip="Line width for the strongest ranked levels (when scaled).")
-line_wid_def         = input.int(1,          "Default Line Width",           group=GRP_STYLE, minval=1, maxval=10, tooltip="Line width for structural/unranked levels (e.g. Expected Move, Open Price, Zero Gamma).")
 strength_line_width  = input.bool(true,      "Strength → Line Width",        group=GRP_STYLE,
-     tooltip="Scales line width by level strength. Strongest levels draw at Max Line Width; weaker levels draw thinner down to Min Line Width.\n\nStrength is peer-relative within each category: Call/Put Walls compare by their respective directional GEX; Absolute Gamma by total GEX (call + put); Large Gamma by absolute net GEX. A wall at 75% means its GEX is 75% of the strongest wall in that same group.")
+     tooltip="When on, line width scales with level strength. The strongest level uses Max Line Width; weaker levels thin down toward Min Line Width. When off, every level uses Default Line Width.\n\nStrength is peer-relative within each category: Call/Put Walls compare by their respective directional GEX; Absolute Gamma by total GEX (call + put); Large Gamma by absolute net GEX. A wall at 75% means its GEX is 75% of the strongest wall in that same group.")
+line_wid_min         = input.int(1,          "Min Line Width",               group=GRP_STYLE, minval=1, maxval=5, active=strength_line_width, tooltip="Line width for the weakest ranked levels (when scaled).")
+line_wid_max         = input.int(5,          "Max Line Width",               group=GRP_STYLE, minval=1, maxval=10, active=strength_line_width, tooltip="Line width for the strongest ranked levels (when scaled).")
+line_wid_def         = input.int(1,          "Default Line Width",           group=GRP_STYLE, minval=1, maxval=10, tooltip="Line width used when Strength → Line Width is off, and for structural levels (Expected Move, Open Price, Zero Gamma).")
 use_strength_opacity = input.bool(true,      "Strength → Opacity",           group=GRP_STYLE,
      tooltip="Scales line and zone opacity by level strength. Weaker levels appear more transparent. Works in conjunction with the base Level Opacity setting.")
 show_strength_pct    = input.bool(true,     "Strength % in Labels",         group=GRP_STYLE,
@@ -255,7 +269,7 @@ show_gex_magnitude   = input.bool(true,     "GEX Magnitude in Labels",      grou
 show_vol_resilience  = input.bool(false,     "Vol Resilience in Labels",     group=GRP_STYLE,
      tooltip="Appends ↑ or ↓ to ranked level labels based on the volResilience field in the paste data.\n\n↑ = level strengthens under IV expansion (dealers hedge harder into it).\n↓ = level dissolves when VIX spikes.\n\nOnly annotates when |volResilience| > 10% — levels below this threshold are vol-neutral and treated as normal S/R. Seeing no arrows at all is common and means all displayed levels behave similarly under a vol spike (low-signal environment).\n\nRequires the 4-tuple paste format: price:strength:volResilience:magnitude.")
 show_zones           = input.bool(true,      "Level Zones",                  group=GRP_STYLE,
-     tooltip="Draws a shaded band above and below each level line to visualise its influence zone. Zone height is controlled by 'Zone Height (ticks)'.")
+     tooltip="Draws a shaded band above and below each level line to visualise its influence zone. Zone height is controlled by 'Zone Height (pts)'.")
 zone_pts             = input.float(1.00,      "Zone Height (pts)",            group=GRP_STYLE, minval=0.01, maxval=50.0, step=0.01,
      tooltip="Half-height of each level's zone band, in points. Total band height is 2× this value. Proximity highlighting activates when price enters this band.")
 lbl_align            = input.string("Left", "Label Alignment",            group=GRP_STYLE,
@@ -265,7 +279,7 @@ lbl_format           = input.string("Full", "Label Format",                  gro
 lbl_size             = input.string(size.normal, "Label Size",               group=GRP_STYLE,
      options=[size.tiny, size.small, size.normal, size.large, size.huge])
 lbl_pos              = input.string("Below", "Label Vertical Position",      group=GRP_STYLE,
-     options=["Above", "Below"])
+     options=["Above", "Below"], tooltip="Above or below the level line. With Level Zones on, the text starts at the outer edge of that level's zone, so the band does not cover it. Max Pain uses its grown zone.")
 lbl_offset           = input.int(2,          "Label Offset (bars)",          group=GRP_STYLE, minval=-100, maxval=500,
      tooltip="Left: bars inward from left edge. Last Bar: bars to the right of the last bar.")
 line_style_walls     = input.string("Solid", "Walls Line Style",             group=GRP_STYLE, options=["Solid", "Dashed", "Dotted"])
@@ -354,6 +368,55 @@ max_pain_grow_max    = input.float(5.0,    "Max Growth Multiplier",      group=G
      tooltip="Maximum zone width multiplier at close. 5.0 = zone can grow up to 5× its base width.")
 
 
+// ── Signals & Alerts ────────────────────────────────────────────────
+// Visual markers use labels (not plotshape) so they do not consume the
+// 64-plot budget already spent on price-axis series. Alerts use alert(),
+// which also has no plot cost. Create one TV alert on "Any alert() function call".
+
+var string GRP_SIG = "Signals & Alerts"
+arm_scope = input.string("All visible", "Arm Scope", group=GRP_SIG,
+     options=["Off", "All visible", "Custom", "Nearest only"],
+     tooltip="Off: no markers or alert() calls.\nAll visible: every level currently drawn (including Open / Underlying / move bands if those Visibility toggles are on).\nCustom: only the category toggles below.\nNearest only: nearest Call/Put walls relative to the bar open. Direction is set by Nearest Walls below.\n\nTradingView snapshots these inputs when you create the alert. Recreate the alert after changing Arm Scope.")
+nearest_sides = input.string("Ahead", "Nearest Walls", group=GRP_SIG,
+     options=["Ahead", "Both sides"],
+     tooltip="Used when Arm Scope is Nearest only.\nAhead: Call Wall above the bar open (resistance) and Put Wall below (support). Breakouts through those walls fire; a cross back does not, because that wall is no longer ahead of price.\nBoth sides: also arm the nearest Call Wall below and Put Wall above, so reclaim / loss of a broken wall fires.")
+show_sig_markers = input.bool(true, "Show Signal Markers", group=GRP_SIG,
+     tooltip="Draw ▲/▼ triangles on bars that hit an armed level, like Tradovate and NinjaTrader. Uses drawings, not plots, so price-axis series stay intact.")
+sig_marker_size = input.int(5, "Signal Marker Size", group=GRP_SIG, minval=1, maxval=40,
+     tooltip="Size of the ▲/▼ triangles, on TradingView's label-size scale. Tiny is about 7, Small 10, Normal 12, Large 18, Huge 24. Default 5 is a step smaller than Tiny. Raise it if the markers are hard to see.")
+signal_events = input.string("Pierce", "Signal Events", group=GRP_SIG,
+     options=["Pierce", "Crossover", "Both"],
+     tooltip="Crossover: bar opens on one side of the level and closes on the other (break / reclaim).\nPierce: bar opens and closes on the same side, but the wick trades through (hold / rejection).\nMatches Tikitrade Gamma on Tradovate. Pierce is the quieter default.")
+confirm_signals = input.bool(true, "Confirm on Bar Close", group=GRP_SIG,
+     tooltip="When on, markers and alert() fire only on barstate.isconfirmed (no repaint). Recommended for webhooks.\nWhen off, the first hit during the forming bar fires (faster, noisier).")
+invert_signals = input.bool(false, "Invert Signal Direction", group=GRP_SIG,
+     tooltip="Swap buy/sell mapping. Default: crossover/pierce above = buy, below = sell.")
+arm_walls = input.bool(true, "Arm Walls (Call / Put)", group=GRP_SIG,
+     tooltip="Used when Arm Scope is Custom.")
+arm_key_gamma = input.bool(true, "Arm Key / Absolute Gamma", group=GRP_SIG,
+     tooltip="Used when Arm Scope is Custom. Key Gamma Strike and Absolute Gamma.")
+arm_large_gamma = input.bool(false, "Arm Large Gamma", group=GRP_SIG,
+     tooltip="Used when Arm Scope is Custom.")
+arm_zero_gamma = input.bool(true, "Arm Zero Gamma", group=GRP_SIG,
+     tooltip="Used when Arm Scope is Custom. Includes Flip Candidate.")
+arm_vanna = input.bool(false, "Arm Vanna Inflection", group=GRP_SIG,
+     tooltip="Used when Arm Scope is Custom.")
+arm_speed_trap = input.bool(false, "Arm Speed Trap", group=GRP_SIG,
+     tooltip="Used when Arm Scope is Custom.")
+arm_max_pain = input.bool(false, "Arm Max Pain", group=GRP_SIG,
+     tooltip="Used when Arm Scope is Custom.")
+arm_moves = input.bool(true, "Arm Move Bounds", group=GRP_SIG,
+     tooltip="Used when Arm Scope is Custom. Expected / Extreme / Implied / Implied 2SD / Transition.")
+arm_ref = input.bool(false, "Arm Open / Underlying", group=GRP_SIG,
+     tooltip="Used when Arm Scope is Custom. Session open and snapshot underlying. Under All visible they follow the Visibility toggles like every other level.")
+alert_format = input.string("JSON", "Alert Format", group=GRP_SIG,
+     options=["JSON", "Human", "Custom"],
+     tooltip="JSON: one object per bar with an events[] array — best for webhooks.\nHuman: readable text.\nCustom: render the template below once per event (joined by newline if several fire on the same bar).")
+alert_template = input.text_area(
+     defval  = "{\"action\":\"{action}\",\"symbol\":\"{ticker}\",\"price\":{price},\"comment\":\"{level} {event}\"}",
+     title   = "Custom Alert Template",
+     group   = GRP_SIG,
+     tooltip = "Used when Alert Format is Custom. Tokens: {action} {event} {level} {level_price} {price} {ticker} {interval} {strength} {basis_shift}\nFor a single-action copier, combine this with Arm Scope = Nearest only.\nCreate Alert → Tiki Gamma → Any alert() function call → paste your webhook URL. The message field can stay empty.")
 
 
 // ════════════════════════════════════════════════════════════════════
@@ -615,11 +678,16 @@ bgcolor(
 // DRAWING
 // ════════════════════════════════════════════════════════════════════
 
+// One newline puts the text flush with the label's y. The label is centered
+// on that price, so the text starts there for every level.
+label_pad(string txt, bool below) =>
+    below ? "\n" + txt : txt + "\n"
+
 // Draw a horizontal line + optional floating label + optional zone box.
 // eff_wid:         computed line width (strength-scaled or fixed)
 // eff_line_opac:   line opacity 0–100
 // eff_zone_opac:   zone fill opacity 0–100 (proximity-boosted or normal)
-// eff_zone_pts:  zone half-height in points (max-pain-scaled or normal)
+// eff_zone_pts:    zone half-height in points (max-pain-scaled or normal)
 // Returns [line, label, box] — label/box may be na if disabled.
 draw_hlevel(price, col, lbl, lstyle, eff_wid, eff_line_opac, eff_zone_opac, eff_zone_pts) =>
     _line_col = color.new(col, 100 - eff_line_opac)
@@ -636,8 +704,14 @@ draw_hlevel(price, col, lbl, lstyle, eff_wid, eff_line_opac, eff_zone_opac, eff_
         _xloc  = xloc.bar_index
         _style = label.style_label_left
         _align = text.align_left
-        _y_pos = price
-        _txt   = txt
+        // The zone is the band that covers the stroke. Sit the text on the
+        // outer edge of this level's own zone so every label clears the same
+        // way. Max Pain passes its grown half-height. Zones off keeps the
+        // text on the price.
+        bool _below = lbl_pos == "Below"
+        float _clear = show_zones ? eff_zone_pts : 0.0
+        _y_pos = price + (_below ? -_clear : _clear)
+        _txt   = label_pad(txt, _below)
         
         _bar_ms = int(time - nz(time[1], time - 60000))
 
@@ -647,13 +721,11 @@ draw_hlevel(price, col, lbl, lstyle, eff_wid, eff_line_opac, eff_zone_opac, eff_
             _xloc  := xloc.bar_time
             _style := label.style_label_left
             _align := text.align_left
-            _txt   := lbl_pos == "Below" ? "\n" + txt : txt + "\n"
         else
             // Anchor at last bar + offset; text extends rightward
             _x_pos := int(bar_index + lbl_offset)
             _style := label.style_label_left
             _align := text.align_left
-            _txt   := lbl_pos == "Below" ? "\n" + txt : txt + "\n"
 
         lb := label.new(
             _x_pos, _y_pos,
@@ -734,6 +806,269 @@ format_name(nm, fmt) =>
 
 
 // ════════════════════════════════════════════════════════════════════
+// SIGNALS — types & helpers
+// Cached unshifted levels are rebuilt when inputs change (full re-run).
+// Detection runs every bar so historical markers and live alert() work.
+// ════════════════════════════════════════════════════════════════════
+
+type SigLevel
+    float  px
+    string name
+    float  strength
+    string cat
+    bool   is_call
+    bool   is_put
+    bool   cap
+
+type SigEvent
+    string action
+    string event
+    string level
+    float  level_price
+    float  strength
+
+json_escape(s) =>
+    str.replace_all(str.replace_all(s, "\\", "\\\\"), "\"", "\\\"")
+
+json_num(x) =>
+    na(x) ? "null" : str.tostring(x, "#.########")
+
+json_str_or_null(x) =>
+    na(x) ? "null" : str.tostring(x, "#.##")
+
+sig_token(template, token, value) =>
+    str.replace_all(template, token, value)
+
+find_sig_idx(array<SigLevel> levels, float p) =>
+    result = -1
+    n = array.size(levels)
+    if n > 0
+        for i = 0 to n - 1
+            if array.get(levels, i).px == p
+                result := i
+    result
+
+push_sig_level(array<SigLevel> levels, float p, string name, float strength, string cat, bool is_call, bool is_put, bool cap) =>
+    if not na(p)
+        idx = find_sig_idx(levels, p)
+        if idx < 0
+            array.push(levels, SigLevel.new(p, name, strength, cat, is_call, is_put, cap))
+        else
+            lv = array.get(levels, idx)
+            if not str.contains(lv.name, name)
+                lv.name := lv.name + " / " + name
+            if not str.contains(lv.cat, cat)
+                lv.cat := lv.cat + "," + cat
+            lv.is_call := lv.is_call or is_call
+            lv.is_put  := lv.is_put or is_put
+            lv.cap     := lv.cap or cap
+            if na(lv.strength) or (not na(strength) and strength > nz(lv.strength, 0.0))
+                lv.strength := strength
+            array.set(levels, idx, lv)
+    p
+
+push_ranked_sig(array<SigLevel> levels, string raw, string full, string cat, bool is_call, bool is_put, bool cap, float min_str, int max_n) =>
+    [pr, _lb, st, _vr] = parse_ranked_levels(raw, full, min_str, max_n)
+    n = array.size(pr)
+    if n > 0
+        for i = 0 to n - 1
+            suffix = n > 1 ? " " + str.tostring(i + 1) : ""
+            push_sig_level(levels, array.get(pr, i), full + suffix, array.get(st, i), cat, is_call, is_put, cap)
+    true
+
+push_single_sig(array<SigLevel> levels, float p, string name, string cat, bool cap) =>
+    push_sig_level(levels, p, name, float(na), cat, false, false, cap)
+
+sig_cat_armed(string cat) =>
+    (arm_walls and str.contains(cat, "walls")) or
+     (arm_key_gamma and str.contains(cat, "key")) or
+     (arm_large_gamma and str.contains(cat, "large")) or
+     (arm_zero_gamma and str.contains(cat, "zero")) or
+     (arm_vanna and str.contains(cat, "vanna")) or
+     (arm_speed_trap and str.contains(cat, "trap")) or
+     (arm_max_pain and str.contains(cat, "pain")) or
+     (arm_moves and str.contains(cat, "moves")) or
+     (arm_ref and str.contains(cat, "ref"))
+
+collect_signal_levels() =>
+    levels = array.new<SigLevel>()
+    user_parsed    = str.split(in_data, "\n")
+    default_parsed = array.new<string>()
+
+    in_call_walls   = resolve_value(user_parsed, default_parsed, "Call Walls")
+    in_put_walls    = resolve_value(user_parsed, default_parsed, "Put Walls")
+    in_abs_gamma    = resolve_value(user_parsed, default_parsed, "Absolute Gamma")
+    in_key_gamma    = resolve_value(user_parsed, default_parsed, "Key Gamma Strike")
+    in_large_gamma  = resolve_value(user_parsed, default_parsed, "Large Gamma")
+    in_vanna        = resolve_value(user_parsed, default_parsed, "Vanna Inflection")
+    in_speed_trap   = resolve_value(user_parsed, default_parsed, "Speed Trap")
+    in_max_pain     = resolve_value(user_parsed, default_parsed, "Max Pain")
+    in_zero_gamma   = resolve_value(user_parsed, default_parsed, "Zero Gamma")
+    in_trans_lower  = resolve_value(user_parsed, default_parsed, "Transition Lower")
+    in_trans_upper  = resolve_value(user_parsed, default_parsed, "Transition Upper")
+    in_exp_upper    = resolve_value(user_parsed, default_parsed, "Expected Move Upper")
+    in_exp_lower    = resolve_value(user_parsed, default_parsed, "Expected Move Lower")
+    in_ext_upper    = resolve_value(user_parsed, default_parsed, "Extreme Move Upper")
+    in_ext_lower    = resolve_value(user_parsed, default_parsed, "Extreme Move Lower")
+    in_imp_upper    = resolve_value(user_parsed, default_parsed, "Implied Move Upper")
+    in_imp_lower    = resolve_value(user_parsed, default_parsed, "Implied Move Lower")
+    in_imp2sd_upper = resolve_value(user_parsed, default_parsed, "Implied Move 2SD Upper")
+    in_imp2sd_lower = resolve_value(user_parsed, default_parsed, "Implied Move 2SD Lower")
+    in_underlying   = resolve_value(user_parsed, default_parsed, "Underlying")
+    in_open         = resolve_value(user_parsed, default_parsed, "Open Price")
+    in_basis_shift  = resolve_value(user_parsed, default_parsed, "Basis Shift")
+
+    if show_walls
+        push_ranked_sig(levels, in_call_walls, "Call Wall", "walls", true, false, true, math.max(min_strength, min_call_wall_strength), max_call_wall_levels)
+        push_ranked_sig(levels, in_put_walls, "Put Wall", "walls", false, true, true, math.max(min_strength, min_put_wall_strength), max_put_wall_levels)
+    if show_key_gamma
+        push_ranked_sig(levels, in_abs_gamma, "Absolute Gamma", "key", false, false, true, math.max(min_strength, min_abs_gamma_strength), max_abs_gamma_levels)
+        push_single_sig(levels, pnum(in_key_gamma), "Key Gamma Strike", "key", true)
+    if show_large_gamma
+        push_ranked_sig(levels, in_large_gamma, "Large Gamma", "large", false, false, true, math.max(min_strength, min_lgamma_strength), max_lgamma_levels)
+    if show_vanna
+        push_single_sig(levels, pnum(in_vanna), "Vanna Inflection", "vanna", true)
+    if show_speed_trap
+        push_single_sig(levels, pnum(in_speed_trap), "Speed Trap", "trap", true)
+    if show_max_pain
+        push_single_sig(levels, pnum(in_max_pain), "Max Pain", "pain", true)
+    if show_zero_gamma
+        _zg_trimmed      = str.trim(in_zero_gamma)
+        _zg_is_candidate = str.length(_zg_trimmed) > 0 and str.substring(_zg_trimmed, str.length(_zg_trimmed) - 1, str.length(_zg_trimmed)) == "?"
+        _zg_clean        = _zg_is_candidate ? str.substring(_zg_trimmed, 0, str.length(_zg_trimmed) - 1) : _zg_trimmed
+        push_single_sig(levels, pnum(_zg_clean), _zg_is_candidate ? "Flip Candidate" : "Zero Gamma", "zero", true)
+    if show_transition
+        push_single_sig(levels, pnum(in_trans_lower), "Gamma Transition Lower", "moves", true)
+        push_single_sig(levels, pnum(in_trans_upper), "Gamma Transition Upper", "moves", true)
+    if show_exp_move
+        push_single_sig(levels, pnum(in_exp_upper), "Expected Move Upper", "moves", false)
+        push_single_sig(levels, pnum(in_exp_lower), "Expected Move Lower", "moves", false)
+    if show_ext_move
+        push_single_sig(levels, pnum(in_ext_upper), "Extreme Move Upper", "moves", false)
+        push_single_sig(levels, pnum(in_ext_lower), "Extreme Move Lower", "moves", false)
+    if show_imp_move
+        push_single_sig(levels, pnum(in_imp_upper), "Implied Move Upper", "moves", false)
+        push_single_sig(levels, pnum(in_imp_lower), "Implied Move Lower", "moves", false)
+    if show_imp_2sd
+        push_single_sig(levels, pnum(in_imp2sd_upper), "Implied Move 2SD Upper", "moves", false)
+        push_single_sig(levels, pnum(in_imp2sd_lower), "Implied Move 2SD Lower", "moves", false)
+    if show_underlying
+        [u_price, _u_time] = parse_underlying(in_underlying)
+        push_single_sig(levels, u_price, "Underlying", "ref", false)
+    if show_open
+        [o_price, _o_time] = parse_underlying(in_open)
+        push_single_sig(levels, o_price, "Open Price", "ref", false)
+
+    raw_shift = pnum(in_basis_shift)
+    [levels, raw_shift]
+
+clone_sig_level(SigLevel lv) =>
+    SigLevel.new(lv.px, lv.name, lv.strength, lv.cat, lv.is_call, lv.is_put, lv.cap)
+
+cap_signal_levels(array<SigLevel> src, int cap_n, float ref_price) =>
+    capped = array.new<SigLevel>()
+    refs   = array.new<SigLevel>()
+    n = array.size(src)
+    if n > 0
+        for i = 0 to n - 1
+            lv = clone_sig_level(array.get(src, i))
+            if lv.cap
+                array.push(capped, lv)
+            else
+                array.push(refs, lv)
+    cn = array.size(capped)
+    if cn > cap_n
+        for i = 0 to cn - 2
+            for j = 0 to cn - i - 2
+                d1 = math.abs(ref_price - array.get(capped, j).px)
+                d2 = math.abs(ref_price - array.get(capped, j + 1).px)
+                if d1 > d2
+                    tmp = array.get(capped, j)
+                    array.set(capped, j, array.get(capped, j + 1))
+                    array.set(capped, j + 1, tmp)
+        while array.size(capped) > cap_n
+            array.pop(capped)
+    out = array.new<SigLevel>()
+    cn2 = array.size(capped)
+    if cn2 > 0
+        for i = 0 to cn2 - 1
+            array.push(out, array.get(capped, i))
+    rn = array.size(refs)
+    if rn > 0
+        for i = 0 to rn - 1
+            array.push(out, array.get(refs, i))
+    out
+
+sig_is_armed(SigLevel lv, float cw_above, float pw_below, float cw_below, float pw_above) =>
+    ahead  = (lv.is_call and not na(cw_above) and lv.px == cw_above) or (lv.is_put and not na(pw_below) and lv.px == pw_below)
+    behind = (lv.is_call and not na(cw_below) and lv.px == cw_below) or (lv.is_put and not na(pw_above) and lv.px == pw_above)
+    arm_scope == "All visible" ? true :
+     arm_scope == "Custom" ? sig_cat_armed(lv.cat) :
+     arm_scope == "Nearest only" ? (ahead or (nearest_sides == "Both sides" and behind)) :
+     false
+
+render_event_template(string tmpl, SigEvent ev, float px, float shift) =>
+    s = tmpl
+    // Longer tokens first so {level} cannot eat {level_price}.
+    s := sig_token(s, "{level_price}", json_num(ev.level_price))
+    s := sig_token(s, "{basis_shift}", json_num(shift))
+    s := sig_token(s, "{strength}", na(ev.strength) ? "null" : str.tostring(ev.strength, "#.##"))
+    s := sig_token(s, "{interval}", timeframe.period)
+    s := sig_token(s, "{action}", ev.action)
+    s := sig_token(s, "{event}", ev.event)
+    s := sig_token(s, "{level}", json_escape(ev.level))
+    s := sig_token(s, "{price}", json_num(px))
+    s := sig_token(s, "{ticker}", json_escape(syminfo.ticker))
+    s
+
+build_alert_payload(array<SigEvent> events, float px, float shift) =>
+    n = array.size(events)
+    payload = ""
+    if n > 0
+        if alert_format == "Human"
+            parts = array.new<string>()
+            for i = 0 to n - 1
+                ev = array.get(events, i)
+                array.push(parts, ev.level + " " + ev.event + " " + json_num(ev.level_price) + " (" + ev.action + ")")
+            payload := "Tiki Gamma: " + array.join(parts, " | ") + " on " + syminfo.ticker + " @ " + json_num(px)
+        else if alert_format == "Custom" and str.length(str.trim(alert_template)) > 0
+            parts = array.new<string>()
+            for i = 0 to n - 1
+                array.push(parts, render_event_template(alert_template, array.get(events, i), px, shift))
+            payload := array.join(parts, "\n")
+        else
+            ev_json = array.new<string>()
+            for i = 0 to n - 1
+                ev = array.get(events, i)
+                array.push(ev_json,
+                     "{\"action\":\"" + ev.action +
+                     "\",\"event\":\"" + ev.event +
+                     "\",\"level\":\"" + json_escape(ev.level) +
+                     "\",\"level_price\":" + json_num(ev.level_price) +
+                     ",\"strength\":" + json_str_or_null(ev.strength) + "}")
+            payload := "{\"source\":\"tiki-gamma\",\"ticker\":\"" + json_escape(syminfo.ticker) +
+                 "\",\"interval\":\"" + timeframe.period +
+                 "\",\"price\":" + json_num(px) +
+                 ",\"basis_shift\":" + json_num(shift) +
+                 ",\"events\":[" + array.join(ev_json, ",") + "]}"
+    payload
+
+new_sig_label(int x, float y, color col, bool is_long) =>
+    label.new(x, y, "",
+         xloc  = xloc.bar_index,
+         yloc  = is_long ? yloc.belowbar : yloc.abovebar,
+         color = color.new(col, 0),
+         style = is_long ? label.style_triangleup : label.style_triangledown,
+         size  = sig_marker_size)
+
+push_sig_marker(array<label> drawn, int x, float y, color col, bool is_long) =>
+    array.push(drawn, new_sig_label(x, y, col, is_long))
+    if array.size(drawn) > 40
+        label.delete(array.shift(drawn))
+    true
+
+
+// ════════════════════════════════════════════════════════════════════
 // MAIN — redraws on every last-bar update
 // ════════════════════════════════════════════════════════════════════
 
@@ -741,6 +1076,10 @@ var all_lines  = array.new<line>()
 var all_labels = array.new<label>()
 var all_boxes  = array.new<box>()
 var table hud_table = na
+
+var array<SigLevel> sig_levels = array.new<SigLevel>()
+var array<label>    sig_drawn  = array.new<label>()
+var float           sig_raw_shift = na
 
 // — Price-axis plot values (var persists across bars; set inside barstate.islast) —
 var float _pa_call_wall_1  = na
@@ -1418,12 +1757,11 @@ if barstate.islast
             is_mp   = array.get(lv_is_mp,     i)
             is_near = array.get(lv_near,      i)
 
-            // Effective line width: strength-proportional or fixed
+            // Effective line width. Off uses the default for every level.
+            // On scales ranked levels between min and max; others stay default.
             eff_w = line_wid_def
-            if str_val >= 0.0
-                eff_w := strength_line_width ?
-                     math.max(1, math.round(float(line_wid_min) + str_val * float(line_wid_max - line_wid_min))) :
-                     line_wid_max
+            if strength_line_width and str_val >= 0.0
+                eff_w := math.max(1, math.round(float(line_wid_min) + str_val * float(line_wid_max - line_wid_min)))
 
             // Effective line opacity: strength-scaled or fixed
             eff_lo = line_opac_def
@@ -1457,11 +1795,15 @@ if barstate.islast
     _show_pw_row    = not na(nearest_pw)
     _show_basis_row = basis_shift != 0.0
     _show_flip_row  = not na(_cached_regime_lv)
+    _show_iv = show_volatility and str.length(get_value(user_parsed, "ATM IV")) > 0
     _show_onboarding = n_lv == 0 or not has_level_input
+    // The producer omits IV Open when it is unavailable or the print is the 09:30 open baseline.
+    _show_iv_open = str.length(get_value(user_parsed, "IV Open")) > 0 and get_value(user_parsed, "IV Open") != "N/A"
+    _iv_rows = _show_iv ? 4 + (_show_iv_open ? 1 : 0) : 0
 
     if show_hud or _show_onboarding
         // Count rows: regime always present; walls and basis only if available
-        _n_rows = _show_onboarding ? 2 : (_show_stale_warning ? 2 : 0) + 1 + (_show_flip_row ? 1 : 0) + (show_walls and _show_cw_row ? 1 : 0) + (show_walls and _show_pw_row ? 1 : 0) + (_show_basis_row ? 1 : 0)
+        _n_rows = _show_onboarding ? 2 : (_show_stale_warning ? 2 : 0) + 1 + (_show_flip_row ? 1 : 0) + (show_walls and _show_cw_row ? 1 : 0) + (show_walls and _show_pw_row ? 1 : 0) + (_show_basis_row ? 1 : 0) + _iv_rows
 
         hud_table := table.new(
                hud_table_pos(hud_pos), 2, _n_rows,
@@ -1501,7 +1843,8 @@ if barstate.islast
 
         // Flip price row (only when zero gamma is present)
         if _show_flip_row
-            _flip_text = (_zg_is_candidate ? "~" : "") + str.tostring(math.round(_cached_regime_lv, 2))
+            _flip_px   = str.tostring(math.round(_cached_regime_lv))
+            _flip_text = _zg_is_candidate ? _flip_px + "?" : "~" + _flip_px
             table.cell(hud_table, 0, _row, "FLIP",      text_color=hud_color, text_size=hud_size, bgcolor=color.new(color.black, 60), text_halign=text.align_left)
             table.cell(hud_table, 1, _row, _flip_text,  text_color=col_zgamma, text_size=hud_size, bgcolor=color.new(color.black, 60), text_halign=text.align_right)
             _row := _row + 1
@@ -1542,9 +1885,122 @@ if barstate.islast
 
         // Basis row
         if _show_basis_row
-            _bs_text = (basis_shift > 0 ? "+" : "") + str.tostring(math.round(basis_shift, 1)) + " pts"
+            _bs_text = (basis_shift > 0 ? "+" : "") + str.tostring(math.round(basis_shift)) + " pts"
             table.cell(hud_table, 0, _row, "BASIS",   text_color=hud_color, text_size=hud_size, bgcolor=color.new(color.black, 60), text_halign=text.align_left)
             table.cell(hud_table, 1, _row, _bs_text,  text_color=hud_color, text_size=hud_size, bgcolor=color.new(color.black, 60), text_halign=text.align_right)
+
+        // Optional paste fields are display values from the saved snapshot, never chart history.
+        // Mirrors Tradovate: shortest timeframe first, rising IV = down color, falling IV = up color.
+        if _show_iv
+            _row := _row + (_show_basis_row ? 1 : 0)
+            _iv_keys   = array.from("ATM IV", "IV Open", "IV 1D", "IV 1W", "IV 30D")
+            _iv_labels = array.from("ATM IV", "IV OPEN", "IV 1D", "IV 1W", "IV 30D")
+            for _i = 0 to 4
+                if _i == 1 and not _show_iv_open
+                    continue
+                _val = get_value(user_parsed, array.get(_iv_keys, _i))
+                _txt = str.length(_val) > 0 ? _val : "N/A"
+                _first = str.substring(_txt, 0, 1)
+                _vcol = _i == 0 ? hud_color : _first == "+" ? col_resist : _first == "-" ? col_support : color.gray
+                table.cell(hud_table, 0, _row, array.get(_iv_labels, _i), text_color=hud_color, text_size=hud_size, text_halign=text.align_left)
+                table.cell(hud_table, 1, _row, _txt, text_color=_vcol, text_size=hud_size, text_halign=text.align_right)
+                _row := _row + 1
+
+
+// ════════════════════════════════════════════════════════════════════
+// SIGNALS — every-bar detection (outside barstate.islast)
+// ════════════════════════════════════════════════════════════════════
+
+if arm_scope != "Off" and (barstate.isfirst or array.size(sig_levels) == 0)
+    [_sig_lv, _sig_sh] = collect_signal_levels()
+    sig_levels := _sig_lv
+    sig_raw_shift := _sig_sh
+
+if arm_scope != "Off" and array.size(sig_levels) > 0
+    work = cap_signal_levels(sig_levels, max_total_levels, close)
+
+    sig_shift = 0.0
+    if in_basis_shift_mode == "Prior Bar"
+        if not na(_dynamic_basis)
+            sig_shift := _dynamic_basis
+        else if apply_basis_shift and not na(sig_raw_shift)
+            sig_shift := sig_raw_shift
+    else if apply_basis_shift
+        sig_shift := not na(sig_raw_shift) ? sig_raw_shift : 0.0
+
+    wn = array.size(work)
+    if sig_shift != 0.0 and wn > 0
+        for i = 0 to wn - 1
+            lv = array.get(work, i)
+            lv.px := lv.px + sig_shift
+            array.set(work, i, lv)
+
+    // Arm against the bar open so a wall that starts the bar as nearest
+    // stays armed through a close that crosses it. Using close here would
+    // drop that wall the moment the cross confirms.
+    nearest_ref = open
+    nearest_cw_above = float(na)
+    nearest_pw_below = float(na)
+    nearest_cw_below = float(na)
+    nearest_pw_above = float(na)
+    if wn > 0
+        for i = 0 to wn - 1
+            lv = array.get(work, i)
+            if lv.is_call and lv.px > nearest_ref
+                nearest_cw_above := na(nearest_cw_above) or lv.px < nearest_cw_above ? lv.px : nearest_cw_above
+            if lv.is_put and lv.px < nearest_ref
+                nearest_pw_below := na(nearest_pw_below) or lv.px > nearest_pw_below ? lv.px : nearest_pw_below
+            if lv.is_call and lv.px < nearest_ref
+                nearest_cw_below := na(nearest_cw_below) or lv.px > nearest_cw_below ? lv.px : nearest_cw_below
+            if lv.is_put and lv.px > nearest_ref
+                nearest_pw_above := na(nearest_pw_above) or lv.px < nearest_pw_above ? lv.px : nearest_pw_above
+
+    want_cross  = signal_events == "Crossover" or signal_events == "Both"
+    want_pierce = signal_events == "Pierce" or signal_events == "Both"
+    sig_ready   = not confirm_signals or barstate.isconfirmed
+
+    events    = array.new<SigEvent>()
+    has_long  = false
+    has_short = false
+
+    if sig_ready and wn > 0
+        for i = 0 to wn - 1
+            lv = array.get(work, i)
+            if sig_is_armed(lv, nearest_cw_above, nearest_pw_below, nearest_cw_below, nearest_pw_above)
+                px = lv.px
+                is_x_up = want_cross and px > open and px <= close
+                is_x_dn = want_cross and px < open and px >= close
+                is_p_up = want_pierce and open > px and close > px and low < px
+                is_p_dn = want_pierce and open < px and close < px and high > px
+                if is_x_up or is_x_dn or is_p_up or is_p_dn
+                    is_long = is_x_up or is_p_up
+                    if invert_signals
+                        is_long := not is_long
+                    ev_name = is_x_up ? "crossover_above" : is_x_dn ? "crossover_below" : is_p_up ? "pierce_above" : "pierce_below"
+                    array.push(events, SigEvent.new(is_long ? "buy" : "sell", ev_name, lv.name, px, lv.strength))
+                    if is_long
+                        has_long := true
+                    else
+                        has_short := true
+
+    if array.size(events) > 0
+        if show_sig_markers
+            // Confirmed/historical labels persist in sig_drawn. On the forming
+            // bar Pine rolls drawings back every tick, so create ephemeral
+            // labels and do not store them in the var array.
+            if barstate.isconfirmed
+                if has_long
+                    push_sig_marker(sig_drawn, bar_index, low, col_support, true)
+                if has_short
+                    push_sig_marker(sig_drawn, bar_index, high, col_resist, false)
+            else
+                if has_long
+                    new_sig_label(bar_index, low, col_support, true)
+                if has_short
+                    new_sig_label(bar_index, high, col_resist, false)
+        payload = build_alert_payload(events, close, sig_shift)
+        if str.length(payload) > 0
+            alert(payload, confirm_signals ? alert.freq_once_per_bar_close : alert.freq_once_per_bar)
 
 
 // ════════════════════════════════════════════════════════════════════
