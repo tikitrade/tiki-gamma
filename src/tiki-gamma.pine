@@ -239,6 +239,8 @@ show_regime_bg     = input.bool(false, "Regime Background Tint",     group=GRP_V
 show_hud           = input.bool(true,  "HUD Dashboard",              group=GRP_VIS,
      tooltip="Compact overlay showing current regime, distance to nearest walls, and basis shift. Rows highlight automatically when price enters a level's zone.")
 show_volatility    = input.bool(true, "Show ATM IV", group=GRP_VIS, tooltip="ATM implied volatility with its Open, 1D, 1W, and 30D changes in volatility points. IV Open is hidden when unavailable (e.g. before 09:30 ET) or when the displayed print is the 09:30 open.")
+show_iv_symbol     = input.bool(false, "Show IV Symbol", group=GRP_VIS, tooltip="Prefix ATM IV with its source symbol (e.g. NDX).")
+show_iv_dte        = input.bool(false, "Show IV DTE", group=GRP_VIS, tooltip="Prefix ATM IV with its calendar days to expiry. After the 16:00 ET close IV rolls to the next expiry, so it reads 1DTE (3DTE on Friday evening).")
 hud_dist_mode      = input.string("Points", "HUD Distance Mode",     group=GRP_VIS, options=["Points", "Sigma"],
      tooltip="Points: distance in price units (e.g. +45.2 pts). Sigma: distance in standard deviations (e.g. +1.2σ).")
 hud_pos            = input.string("Top Right", "HUD Position",       group=GRP_VIS,
@@ -1900,6 +1902,12 @@ if barstate.islast
                     continue
                 _val = get_value(user_parsed, array.get(_iv_keys, _i))
                 _txt = str.length(_val) > 0 ? _val : "N/A"
+                // The ATM IV paste field is "<symbol> <dte>DTE <iv>"; drop the parts the user hid.
+                if _i == 0
+                    _parts = str.split(_txt, " ")
+                    if array.size(_parts) == 3
+                        _dte = array.get(_parts, 1)
+                        _txt := (show_iv_symbol ? array.get(_parts, 0) + " " : "") + (show_iv_dte ? (_dte == "N/ADTE" ? "N/A" : _dte) + " " : "") + array.get(_parts, 2)
                 _first = str.substring(_txt, 0, 1)
                 _vcol = _i == 0 ? hud_color : _first == "+" ? col_resist : _first == "-" ? col_support : color.gray
                 table.cell(hud_table, 0, _row, array.get(_iv_labels, _i), text_color=hud_color, text_size=hud_size, text_halign=text.align_left)
