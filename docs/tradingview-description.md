@@ -1,6 +1,6 @@
 # TradingView Publication Description
 
-Last updated: 2026-03-23
+Last updated: 2026-11-24
 
 ---
 
@@ -25,11 +25,11 @@ This indicator draws manually provided levels. It does not calculate levels from
 
 [b]Zero Gamma Flip[/b] — An important regime filter in modern markets. Above it, dealers may trade mean-reverting. Below it, they may trade amplifying.
 
-[b]Expert Configuration[/b] (Signal-to-Noise Ratio) — Ships with optimized configuration for high-conviction trading. We recommend limiting Walls and Absolute Gamma to 3 levels each at 80%+ strength to filter out noise, while keeping Large Gamma at a 5-level, 50% strength threshold to catch secondary intraday pivots.
+[b]Default Level Filters[/b] — By default, Call Walls and Put Walls show up to 3 levels each at 85%+ strength, Absolute Gamma up to 3 levels at 80%+, and Large Gamma up to 5 levels at 50%+. This keeps fewer lines on the chart. Change the limits in Level Filters.
 
 [b]Gamma Transition Band[/b] (Experimental) — The contested zone around the flip where dealer positioning is mixed. Price action inside this band is inherently noisier. These levels are currently in experimental beta.
 
-[b]Key Gamma Strike & Large Gamma[/b] — Potential areas of interest. Price may gravitate toward them. In trending sessions, they can act as checkpoint S/R. Optional strength percentages and GEX magnitude labels show which levels carry real weight.
+[b]Key Gamma Strike & Large Gamma[/b] — Potential areas of interest. Price may gravitate toward them. In trending sessions, they can act as checkpoint S/R. Optional strength percentages and GEX magnitude labels show each level's relative strength.
 
 [b]Vanna Inflection[/b] — Where an IV expansion triggers forced delta rehedging independent of price movement. A level that is often monitored during gap opens and VIX events.
 
@@ -37,7 +37,7 @@ This indicator draws manually provided levels. It does not calculate levels from
 
 [b]Max Pain[/b] — The settlement gravity point. The zone expands automatically near close as charm-driven delta unwinding theoretically strengthens into expiration — reflecting end-of-day pinning behavior.
 
-[b]Expected / Implied Move Bands[/b] — 1-SD and 2-SD statistical envelopes. Inside the box: mean reversion is plausible. Outside it: respect the move.
+[b]Expected / Implied Move Bands[/b] — 1-SD and 2-SD statistical envelopes. The box shows the range the options market implies for the session.
 
 [b]Visual Design[/b]
 
@@ -46,9 +46,9 @@ This indicator draws manually provided levels. It does not calculate levels from
 [*][b]Strength-Scaled Lines & Opacity[/b] — Dominant levels draw thicker and more opaque. Weaker levels fade. Hierarchy is visible without reading a single label.
 [*][b]HUD Dashboard[/b] — Compact overlay showing current regime, distance to nearest walls in implied-move units (sigma), and futures basis shift.
 [*][b]Proximity Highlighting[/b] — Zone opacity increases when price enters a level. The active level always stands out.
-[*][b]Max Pain Expansion[/b] — The max pain zone grows as charm effects strengthen into the close, reflecting real-time gravitational pull.
+[*][b]Max Pain Expansion[/b] — The max pain zone grows as charm effects strengthen into the close.
 [*][b]Price Axis Tags[/b] — Every level is tagged on the price axis for quick reference without chart clutter.
-[*][b]Futures Basis Shift[/b] — SPX/NDX levels mapped accurately onto ES/NQ charts. When in Prior Bar mode, the indicator dynamically calculates the exact, real-time basis offset using prior close data to ensure perfect, stable alignment. If the ticker is unmapped or Session Open mode is selected, it automatically falls back to your initially pasted Basis Shift.
+[*][b]Futures Basis Shift[/b] — SPX/NDX levels mapped onto ES/NQ charts. In Prior Bar mode, the indicator calculates the basis offset from prior close data on each bar, so the levels follow the futures price. If the ticker is unmapped or Session Open mode is selected, it automatically falls back to your initially pasted Basis Shift.
 [/list]
 
 [b]Settings & Configuration[/b]
@@ -58,7 +58,7 @@ The indicator features deep customisation via its settings panel, grouped for ea
 [list]
 [*][b]Visibility[/b] — Toggle individual level types (Walls, GEX nodes, Vanna, Speed Trap, etc.), the HUD Dashboard, and Price Axis Labels. Choose between Level names, Prices, or both for on-chart labels.
 [*][b]Style[/b] — Adjust base Line Width and enable Strength scaling for width/opacity. Toggle GEX Magnitude ($) and Vol Resilience (↑/↓) arrows in labels. Select Label Alignment (Left vs Last Bar) and Format (Full vs Abbreviated). Configure Display Timezone for timestamped levels.
-[*][b]Level Filters[/b] — Fine-tune signal clarity by setting global and per-type "Min Strength %" thresholds. Use the "Max Total Levels" cap to limit the total number of lines drawn near price.
+[*][b]Level Filters[/b] — Reduce clutter by setting global and per-type "Min Strength %" thresholds. Use the "Max Total Levels" cap to limit the total number of lines drawn near price.
 [*][b]Colors & Opacity[/b] — Customise the color for every level category. Global sliders control base opacity for lines and shaded influence zones.
 [*][b]Visual Effects & Advanced[/b] — Configure Regime Background colors and opacity. Customise Advanced Max Pain settings, including the close-time target and the growth window for end-of-day expansion.
 [/list]
