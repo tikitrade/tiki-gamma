@@ -16,7 +16,7 @@ This indicator draws manually provided levels. It does not calculate levels from
 - **Zero Gamma Flip** — An important regime filter in modern markets. Above it, dealers may trade mean-reverting. Below it, they may trade amplifying.
 - **Default Level Filters** — By default, Call Walls and Put Walls show up to 3 levels each at 85%+ strength, Absolute Gamma up to 3 levels at 80%+, and Large Gamma up to 5 levels at 50%+. This keeps fewer lines on the chart. Change the limits in Level Filters.
 - **Gamma Transition Band (Experimental)** — The contested zone around the flip where dealer positioning is mixed. Price action inside this band is inherently noisier. These levels are currently in experimental beta.
-- **Key Gamma Strike & Large Gamma** — Potential areas of interest. Price may gravitate toward them. In trending sessions, they can act as checkpoint S/R. Optional strength percentages and GEX magnitude labels show which levels carry real weight.
+- **Key Gamma Strike & Large Gamma** — Potential areas of interest. Price may gravitate toward them. In trending sessions, they can act as checkpoint S/R. Optional strength percentages and GEX magnitude labels show each level's relative strength.
 - **Vanna Inflection** — Where an IV expansion triggers forced delta rehedging independent of price movement. A level that is often monitored during gap opens and VIX events.
 - **Speed Trap** — Where a move lower may theoretically create disproportionate dealer selling. A level that may turn a pullback into a flush.
 - **Max Pain** — The settlement gravity point. The zone expands automatically near close as charm-driven delta unwinding theoretically strengthens into expiration — reflecting end-of-day pinning behavior.
@@ -30,7 +30,7 @@ This indicator draws manually provided levels. It does not calculate levels from
 - **Strength-Scaled Lines & Opacity** — Dominant levels draw thicker and more opaque. Weaker levels fade. Hierarchy is visible without reading a single label.
 - **HUD Dashboard** — Compact overlay showing current regime, distance to nearest walls in implied-move units (sigma), and futures basis shift.
 - **Proximity Highlighting** — Zone opacity increases when price enters a level. The active level always stands out.
-- **Max Pain Expansion** — The max pain zone grows as charm effects strengthen into the close, reflecting real-time gravitational pull.
+- **Max Pain Expansion** — The max pain zone grows as charm effects strengthen into the close.
 - **Price Axis Tags** — Every level is tagged on the price axis for quick reference without chart clutter.
 - **Futures Basis Shift** — SPX/NDX levels mapped onto ES/NQ charts. Applied automatically from the pasted data.
 

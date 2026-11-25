@@ -381,18 +381,18 @@ arm_scope = input.string("All visible", "Arm Scope", group=GRP_SIG,
      tooltip="Off: no markers or alert() calls.\nAll visible: every level currently drawn (including Open / Underlying / move bands if those Visibility toggles are on).\nCustom: only the category toggles below.\nNearest only: nearest Call/Put walls relative to the bar open. Direction is set by Nearest Walls below.\n\nTradingView snapshots these inputs when you create the alert. Recreate the alert after changing Arm Scope.")
 nearest_sides = input.string("Ahead", "Nearest Walls", group=GRP_SIG,
      options=["Ahead", "Both sides"],
-     tooltip="Used when Arm Scope is Nearest only.\nAhead: Call Wall above the bar open (resistance) and Put Wall below (support). Breakouts through those walls fire; a cross back does not, because that wall is no longer ahead of price.\nBoth sides: also arm the nearest Call Wall below and Put Wall above, so reclaim / loss of a broken wall fires.")
+     tooltip="Used when Arm Scope is Nearest only.\nAhead: the Call Wall above the bar open and the Put Wall below it. Markers and alerts fire when price crosses those walls; a cross back does not, because that wall is no longer ahead of price.\nBoth sides: also arm the nearest Call Wall below and Put Wall above, so a cross back through a wall that price already crossed also fires.")
 show_sig_markers = input.bool(true, "Show Level Markers", group=GRP_SIG,
      tooltip="Draw ▲/▼ triangles on bars that hit an armed level, like Tradovate and NinjaTrader. Uses drawings, not plots, so price-axis series stay intact.")
 sig_marker_size = input.int(5, "Marker Size", group=GRP_SIG, minval=1, maxval=40,
      tooltip="Size of the ▲/▼ triangles, on TradingView's label-size scale. Tiny is about 7, Small 10, Normal 12, Large 18, Huge 24. Default 5 is a step smaller than Tiny. Raise it if the markers are hard to see.")
 signal_events = input.string("Pierce", "Marker Events", group=GRP_SIG,
      options=["Pierce", "Crossover", "Both"],
-     tooltip="Crossover: bar opens on one side of the level and closes on the other (break / reclaim).\nPierce: bar opens and closes on the same side, but the wick trades through (hold / rejection).\nMatches Tikitrade Gamma on Tradovate. Pierce is the quieter default.")
+     tooltip="Crossover: bar opens on one side of the level and closes on the other (break / reclaim).\nPierce: bar opens and closes on the same side, but the wick trades through (hold / rejection).\nMatches Tiki Gamma on Tradovate. Pierce is the quieter default.")
 confirm_signals = input.bool(true, "Confirm on Bar Close", group=GRP_SIG,
      tooltip="When on, markers and alert() fire only on barstate.isconfirmed (no repaint). Recommended for webhooks.\nWhen off, the first hit during the forming bar fires (faster, noisier).")
 invert_signals = input.bool(false, "Invert Marker Direction", group=GRP_SIG,
-     tooltip="Swap the marker direction. Default: a crossover or pierce up through a level draws ▲ below the bar, and one down through a level draws ▼ above the bar. Also swaps the action field in the alert payload.")
+     tooltip="Swap the marker direction. By default, ▲ draws below the bar when the bar closes above the level (a crossover up, or a wick down through the level that closes back above). ▼ draws above the bar when it closes below the level. This also swaps the action field in the alert payload.")
 arm_walls = input.bool(true, "Arm Walls (Call / Put)", group=GRP_SIG,
      tooltip="Used when Arm Scope is Custom.")
 arm_key_gamma = input.bool(true, "Arm Key / Absolute Gamma", group=GRP_SIG,

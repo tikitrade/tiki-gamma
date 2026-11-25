@@ -29,7 +29,7 @@ This indicator draws manually provided levels. It does not calculate levels from
 
 [b]Gamma Transition Band[/b] (Experimental) — The contested zone around the flip where dealer positioning is mixed. Price action inside this band is inherently noisier. These levels are currently in experimental beta.
 
-[b]Key Gamma Strike & Large Gamma[/b] — Potential areas of interest. Price may gravitate toward them. In trending sessions, they can act as checkpoint S/R. Optional strength percentages and GEX magnitude labels show which levels carry real weight.
+[b]Key Gamma Strike & Large Gamma[/b] — Potential areas of interest. Price may gravitate toward them. In trending sessions, they can act as checkpoint S/R. Optional strength percentages and GEX magnitude labels show each level's relative strength.
 
 [b]Vanna Inflection[/b] — Where an IV expansion triggers forced delta rehedging independent of price movement. A level that is often monitored during gap opens and VIX events.
 
@@ -46,7 +46,7 @@ This indicator draws manually provided levels. It does not calculate levels from
 [*][b]Strength-Scaled Lines & Opacity[/b] — Dominant levels draw thicker and more opaque. Weaker levels fade. Hierarchy is visible without reading a single label.
 [*][b]HUD Dashboard[/b] — Compact overlay showing current regime, distance to nearest walls in implied-move units (sigma), and futures basis shift.
 [*][b]Proximity Highlighting[/b] — Zone opacity increases when price enters a level. The active level always stands out.
-[*][b]Max Pain Expansion[/b] — The max pain zone grows as charm effects strengthen into the close, reflecting real-time gravitational pull.
+[*][b]Max Pain Expansion[/b] — The max pain zone grows as charm effects strengthen into the close.
 [*][b]Price Axis Tags[/b] — Every level is tagged on the price axis for quick reference without chart clutter.
 [*][b]Futures Basis Shift[/b] — SPX/NDX levels mapped onto ES/NQ charts. In Prior Bar mode, the indicator calculates the basis offset from prior close data on each bar, so the levels follow the futures price. If the ticker is unmapped or Session Open mode is selected, it automatically falls back to your initially pasted Basis Shift.
 [/list]
